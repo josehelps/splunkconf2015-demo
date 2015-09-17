@@ -4,7 +4,7 @@
 
 
 - name: install clamav cron
-  template: src=etc/cron.daily/clamav dest=/etc/cron.daily/clamav owner=root group=root mode=755 
+  copy: src=etc/cron.daily/clamav dest=/etc/cron.daily/clamav owner=root group=root mode=755 
   tags: 
    - configuration
    - security 

@@ -6,7 +6,7 @@
   user: root
   vars:
     # splunk universal forwarder binary to install
-    splunk_uf_binary: 'splunkforwarder-6.2.0-237341-Linux-x86_64.tgz'
+    splunk_uf_binary: 'splunkforwarder-6.2.6-274160-Linux-x86_64.tgz'
 
   roles:
     - common

@@ -4,6 +4,9 @@
 - name: apply common configuration to all nodes
   hosts: indexer
   user: root
+  vars:
+    # splunk binary to install
+    splunk_binary: 'splunk-6.2.6-274160-Linux-x86_64.tgz'
 
   roles:
     - common
