@@ -1,0 +1,28 @@
+---
+### global settings for your infrastructure ### 
+
+# common user to deploy across the infrastructure
+# the user will be given sudo privilages under role/common/files/etc/sudoers file 
+# ideally your admin user, not root ;-)
+user_name: 'splunk-admin'
+
+# password to set for the user above in encrypted format, similat to /etc/shadow
+user_pass: '$6$MO3mawdB$gQkwyvLLJ3SJzvqcnUK4Tcrzqm1OWdAXqzpMGaM66VKjIkKIDDunHSfShIQHEZSYNWBd4NcSfUbzCitmMsAWw.'
+# ssh key to copy over for the user above
+key_file: '/home/splunk-admin/.ssh/id_rsa.pub' 
+
+# splunk binary to install. Located under playbooks/splunk_binary/
+splunk_binary: 'splunk-6.2.6-274160-Linux-x86_64.tgz'
+
+# splunk uf binary to install. Located under playbooks/splunk_binary/
+splunk_uf_binary: 'splunkforwarder-6.2.6-274160-Linux-x86_64.tgz'
+
+# passwd file for all splunk instances. Located under playbooks/splunk_creds/
+splunk_passwd: 'passwd'
+
+# CA + cert for splunk web. Located under playbooks/splunk_creds/
+splunk_ca: 'cert.pem'
+
+#Splunk server key for splunk web. Located under playbooks/splunk_creds/
+splunk_pem: 'server-key.pem'
+
