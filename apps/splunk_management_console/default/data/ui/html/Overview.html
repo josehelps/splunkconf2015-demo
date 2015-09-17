@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Overview | Splunk</title>
+  <link rel="shortcut icon" href="{{SPLUNKWEB_URL_PREFIX}}/static/img/favicon.ico" />
+  <meta name="description" content="listen to your data" />
+  <meta name="author" content="Splunk Inc." />
+  <meta name="viewport" content="width=1024, initial-scale=1.0" />
+  <link rel="stylesheet" type="text/css" href="{{SPLUNKWEB_URL_PREFIX}}/static/css/build/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="{{SPLUNKWEB_URL_PREFIX}}/static/css/build/pages/dashboard-simple-bootstrap.min.css" />
+  <!--<link rel="stylesheet" type="text/css" href="{{SPLUNKWEB_URL_PREFIX}}/static/css/build/pages/distributed-management-console-overview-bootstrap.min.css" />-->
+  <link rel="stylesheet" type="text/css" href="{{SPLUNKWEB_URL_PREFIX}}/static/app/splunk_management_console/overview-distributed.css">
+  <!-- no cache fix for when not on localhost -->
+  <!--<script type="text/javascript"> less = {}; less.env = 'development';</script>-->
+  <!--<style type="text/css">abcd</style>-->
+</head>
+<body class="simplexml preload locale-en">
+<!-- 
+BEGIN LAYOUT
+This section contains the layout for the dashboard. Splunk uses proprietary
+styles in <div> tags, similar to Bootstrap's grid system. 
+-->
+<a class="navSkip" href="#navSkip" tabindex="1">Screen reader users, click here to skip the navigation bar</a>
+<div class="header">
+  <div id="placeholder-splunk-bar">
+    <a href="{{SPLUNKWEB_URL_PREFIX}}/app/launcher/home" class="brand" title="splunk &gt; listen to your data">splunk<strong>&gt;</strong></a>
+  </div>
+  <div id="placeholder-app-bar"></div>
+</div>
+<a id="navSkip"></a>
+<div class="smc-container" id="smc-distributed-container">
+  <div class="dashboard-body container-fluid main-section-body" data-role="main">
+    <div class="dashboard-header">
+      <h2 class="do-i18n">Overview</h2>
+      <p><span class="do-i18n">The Distributed Management Console monitors important aspects of your Splunk Enterprise deployment. </span><a href="#" class="external learnMoreLink" target="_blank"><span class="do-i18n">Learn More</span></a></p>
+      <h3><span class="do-i18n">Mode: distributed</span> <a class="go-to-setup do-i18n"></a></h3>
+    </div>
+    <div id="smc-distributed-mode-view-container"></div>
+    <div id="smc-alerts-view-container"></div>
+  </div>
+</div>
+<div class="smc-container" id="smc-standalone-container">
+</div>
+<div class="footer"></div>
+
+<!-- 
+END LAYOUT
+-->
+
+<script src="{{SPLUNKWEB_URL_PREFIX}}/config?autoload=1"></script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/static/js/i18n.js"></script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/i18ncatalog?autoload=1"></script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/static/js/build/simplexml.min/config.js"></script>
+<script>
+  require.config({ urlArgs: 'bust=' +  (new Date()).getTime() })
+</script>
+<script type="text/javascript">
+require.config({
+  baseUrl: "{{SPLUNKWEB_URL_PREFIX}}/static/js",
+  waitSeconds: 0 // Disable require.js load timeout
+});
+
+//
+// LIBRARY REQUIREMENTS
+//
+// In the require function, we include the necessary libraries and modules for
+// the HTML dashboard. Then, we pass variable names for these libraries and
+// modules as function parameters, in order.
+// 
+// When you add libraries or modules, remember to retain this mapping order
+// between the library or module and its function parameter. You can do this by
+// adding to the end of these lists, as shown in the commented examples below.
+
+require([
+    "splunkjs/mvc",
+    "splunkjs/mvc/utils",
+    "underscore",
+    "jquery",
+    "splunkjs/mvc/simplexml",
+    "splunkjs/mvc/headerview",
+    "splunkjs/mvc/footerview",
+    "splunkjs/mvc/simplexml/dashboardview",
+    "splunkjs/mvc/simpleform/formutils",
+    "splunkjs/mvc/simplexml/urltokenmodel",
+    // Add comma-separated libraries and modules manually here, for example:
+    // ..."splunkjs/mvc/simplexml/urltokenmodel",
+    // "splunkjs/mvc/checkboxview"
+    'splunkjs/mvc/sharedmodels',
+    '../app/splunk_management_console/overview/alerts/Master',
+    '../app/splunk_management_console/overview/distributed/Master',
+    '../app/splunk_management_console/singleinstance',
+    '../app/splunk_management_console/util',
+    'collections/shared/managementconsole/DistsearchGroups',
+    'uri/route'
+    ],
+    function(
+        mvc,
+        utils,
+        _,
+        $,
+        DashboardController,
+        HeaderView,
+        FooterView,
+        Dashboard,
+        FormUtils,
+        UrlTokenModel,
+        SharedModels,
+        AlertsView,
+        DistributedModeView,
+        SingleInstanceView,
+        dmcUtil,
+        DistsearchGroupsCollection,
+        route
+        // Add comma-separated parameter names here, for example: 
+        // ...UrlTokenModel, 
+        // CheckboxView
+        ) {
+
+      // <RT ADD>
+      // dynamically modifying text in dom to support i18n
+      document.title = _(document.title).t();
+      $('span.do-i18n').each(function() {
+        $(this).text(_($(this).text()).t());
+      });
+      // </RT>
+
+      var pageLoading = true;
+
+
+      //
+      // TOKENS
+      //
+
+	  // Create token namespaces
+      var urlTokenModel = new UrlTokenModel();
+      mvc.Components.registerInstance('url', urlTokenModel);
+      var defaultTokenModel = mvc.Components.getInstance('default', {create: true});
+      var submittedTokenModel = mvc.Components.getInstance('submitted', {create: true});
+
+      urlTokenModel.on('url:navigate', function() {
+        defaultTokenModel.set(urlTokenModel.toJSON());
+        if (!_.isEmpty(urlTokenModel.toJSON()) && !_.all(urlTokenModel.toJSON(), _.isUndefined)) {
+          submitTokens();
+        } else {
+          submittedTokenModel.clear();
+        }
+      });
+
+      // Initialize tokens
+      defaultTokenModel.set(urlTokenModel.toJSON());
+
+      function submitTokens() {
+        // Copy the contents of the defaultTokenModel to the submittedTokenModel and urlTokenModel
+        FormUtils.submitForm({ replaceState: pageLoading });
+      }
+
+      function setToken(name, value) {
+        defaultTokenModel.set(name, value);
+        submittedTokenModel.set(name, value);
+      }
+
+      function unsetToken(name) {
+        defaultTokenModel.unset(name);
+        submittedTokenModel.unset(name);
+      }
+
+      $('.single').mouseenter(function() {
+        $(this).find('.single-value .single-result').css('text-decoration', 'underline');
+      }).mouseleave(function() {
+            $(this).find('.single-value .single-result').css('text-decoration', 'none');
+          });
+      $('a.go-to-setup').attr('href', dmcUtil.getFullPath('/app/splunk_management_console/managementconsole_configure')).text(_('change').t());
+
+
+      //
+      // SPLUNK HEADER AND FOOTER
+      //
+
+      new HeaderView({
+        id: 'header',
+        section: 'dashboards',
+        el: $('.header'),
+        acceleratedAppNav: true,
+        useSessionStorageCache: true
+      }, {tokens: true}).render();
+
+      new FooterView({
+        id: 'footer',
+        el: $('.footer')
+      }, {tokens: true}).render();
+
+
+      //
+      // DASHBOARD EDITOR
+      //
+
+      new Dashboard({
+        id: 'dashboard',
+        el: $('.dashboard-body')
+      }, {tokens: true}).render();
+
+
+
+      var currentApp = SharedModels.get('appLocal');
+      var distsearchGroups = new DistsearchGroupsCollection();
+
+      $.when(
+        currentApp.dfd,
+        distsearchGroups.fetch({
+          data: {
+            search: 'name=dmc_*'
+          }
+        })
+      ).done(function() {
+        var isStandalone = !currentApp.entry.content.get('configured');
+        if (isStandalone) {
+            SingleInstanceView.render($('#smc-standalone-container'));
+            $('#smc-standalone-container').show();
+            var alertsView = new AlertsView({}, { '$container': $('#smc-alerts-view-standalone-container') });
+            if (distsearchGroups.models.length === 0) {
+              alertsView.needsSetup();
+            }
+
+        } else {
+          $('#smc-distributed-container').show();
+          new AlertsView({}, { '$container': $('#smc-alerts-view-container') });
+          new DistributedModeView();
+          
+          // Initialize time tokens to default
+            if (!defaultTokenModel.has('earliest') && !defaultTokenModel.has('latest')) {
+              defaultTokenModel.set({ earliest: '0', latest: '' });
+            }
+        }
+        submitTokens();
+
+
+
+        //
+        // DASHBOARD READY
+        //
+
+        DashboardController.ready();
+        pageLoading = false;
+      });
+
+      var learnMoreLink = route.docHelp(
+          (utils.getPageInfo().root ? '/'+utils.getPageInfo().root : ''),
+          utils.getPageInfo().locale,
+          'app.management_console.overview'
+      );
+
+      $('.learnMoreLink').attr('href', learnMoreLink);
+    }
+);
+</script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/static/app/splunk_management_console/dashboard.js" type="text/javascript"></script>
+</body>
+</html>

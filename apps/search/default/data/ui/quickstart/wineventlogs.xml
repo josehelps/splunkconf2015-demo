@@ -1,0 +1,36 @@
+<quickstart>
+
+    <title>Windows event logs</title>
+    <optiongroup>
+        
+        <option platforms="Windows">
+            <title>Collect Windows event logs from this Splunk server</title>
+            <summary>Configure Splunk to collect Windows event logs from this machine.</summary>
+            <doctarget>[learnmore.recipes.windows.eventlogs]</doctarget>
+            <action type="edit_local_eventlog">
+                <label>Next</label>
+            </action>
+        </option>
+        
+        <option platforms="Windows">
+            <title>Collect Windows event logs from another machine</title>
+            <summary>Use WMI to collect Windows event logs from any other machine on your network.</summary>
+            <doctarget>[learnmore.recipes.windows.wmi]</doctarget>
+            <action type="add_remote_eventlog">
+                <label>Next</label>
+            </action>
+        </option>
+        
+        <option platforms="Unix">
+            <title>Forward Windows event logs from another machine</title>
+            <summary>Use Splunk's universal forwarder to forward data from remote machines to this Splunk server.</summary>
+            <doctarget>[learnmore.recipes.forwarder]</doctarget>
+            <action type="href">
+                <label>Download the universal forwarder</label>
+                <target>http://splunk.com/r/universalforwarder</target>
+            </action>
+        </option>
+        
+    </optiongroup>
+
+</quickstart>

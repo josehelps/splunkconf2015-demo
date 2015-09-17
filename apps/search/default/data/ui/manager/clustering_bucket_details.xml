@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<endpoint name="clustering_bucket_details" template="pages/system.html">
+  <header>unused</header>
+</endpoint>

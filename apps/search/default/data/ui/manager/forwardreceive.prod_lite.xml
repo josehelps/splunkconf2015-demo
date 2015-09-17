@@ -1,0 +1,10 @@
+<endpoint name="forwardreceive">
+  <header></header>
+  <menu name="data_configurations">
+    <label>Receiving</label>
+    <url>/manager/%(namespace)s/data/inputs/tcp/cooked</url>
+    <description>Configure to receive data.</description>
+    <order>60</order>
+    <id>forwarding</id>
+  </menu>
+</endpoint>

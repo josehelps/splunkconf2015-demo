@@ -1,0 +1,459 @@
+<form hideEdit="True" script="table_data_bar.js, common_control.js" stylesheet="table_data_bar.css">
+  <label>Resource Usage: Machine</label>
+  <fieldset autoRun="true" submitButton="false">
+    <input type="dropdown" searchWhenChanged="true" token="machine">
+      <label>Machine:</label>
+      <populatingSearch fieldForLabel="machine" fieldForValue="machine">
+        | `dmc_get_machine_info`
+      </populatingSearch> 
+      <selectFirstChoice>true</selectFirstChoice>
+      <showClearButton>false</showClearButton>
+      <change>
+        <condition value="*">
+          <set token="host">$row.host$</set>
+          <set token="splunk_server">$row.serverName$</set>
+          <unset token="form.hostDiskUsageHistorical" />
+          <unset token="form.instanceDiskUsageSnapshot" />
+        </condition>
+      </change>
+    </input>
+  </fieldset>
+  <searchTemplate>
+| rest splunk_server=$splunk_server$ /services/server/info 
+| fields numberOfCores, physicalMemoryMB 
+| eval capacity=[rest splunk_server=$splunk_server$ /services/server/status/partitions-space | return $capacity]
+  </searchTemplate>
+  <row>
+    <panel>
+      <table>
+        <title>Machine Information</title>
+        <searchString>
+| inputlookup dmc_assets
+| search serverName = $splunk_server$
+| stats first(serverName) as serverName, first(host) as host, first(machine) as machine
+| join type=outer serverName [
+  | rest splunk_server=$splunk_server$ /services/server/info
+  | fields serverName, numberOfCores, physicalMemoryMB, os_name, cpu_arch
+]
+| fields machine numberOfCores physicalMemoryMB os_name cpu_arch
+| rename machine as Machine, numberOfCores AS "Number of Cores", physicalMemoryMB AS "Physical Memory Capacity (MB)", cpu_arch AS "CPU Architecture", os_name AS "Operating System"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="refresh.time.visible">false</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <table>
+        <title>Splunk Enterprise Instance(s) on this Machine</title>
+        <searchString>
+| inputlookup assets.csv
+| search machine=$machine$
+| mvcombine search_group
+| join type=outer peerURI
+  [| rest splunk_server=local /services/search/distributed/peers
+   | rename title as peerURI]
+| join type=outer peerURI [|rest splunk_server=local /services/server/info
+  | eval peerURI = "localhost"
+  | eval status = "Up"]
+| join peerURI
+  [| `dmc_get_instance_roles` ]
+| eval status = if(status == "Up", status, "Unreachable")
+| makemv role
+| fields serverName, peerURI, role, version, status
+| rename serverName as Instance, peerURI as URI, status as "Status", role as Role, version as "Version"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="refresh.time.visible">false</option>
+        <drilldown>
+          <condition field="Instance">
+            <link target="_self">
+              <![CDATA[resource_usage_instance?form.splunk_server=$click.value2$]]>
+            </link>
+          </condition>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <html>
+        <p>Click on instance name for more details.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <h2>
+          <span>Select views: </span>
+          <span id="link-switcher-view">
+            <a href="#" class="btn-pill active" data-item="all">All</a>
+            <a href="#" class="btn-pill" data-item="snapshot">Snapshot</a>
+            <a href="#" class="btn-pill" data-item="historical">Historical</a>
+          </span>
+        </h2>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <html>
+        <h1 id="snapshot_section_title">Snapshots</h1>
+      </html>
+    </panel>
+  </row>
+    <row>
+    <panel rejects="$historical$">
+      <title>CPU Usage</title>
+      <chart>
+        <searchString>
+| rest splunk_server=$splunk_server$ /services/server/status/resource-usage/hostwide 
+| stats first(cpu_system_pct) as system, first(cpu_user_pct) as user by splunk_server 
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.axisTitleY.text">CPU Usage (%)</option>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.axisY.maximumNumber">100</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisLabelsX.majorLabelVisibility">hide</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel rejects="$historical$">
+      <title>Physical Memory Usage (MB)</title>
+      <chart>
+        <searchString>
+| rest splunk_server=$splunk_server$ /services/server/status/resource-usage/hostwide 
+| eval perc_80=mem*0.8 
+| eval perc_90=mem*0.9 
+| eval mem_used=round(mem_used, 0) 
+| gauge mem_used 0 perc_80 perc_90, mem
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">fillerGauge</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.axisTitleY.text">Memory (MB)</option>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>Disk Usage</title>
+      <input type="dropdown" token="instanceDiskUsageSnapshot" searchWhenChanged="true">
+        <showClearButton>false</showClearButton>
+        <label>Instance</label>
+        <populatingSearch fieldForLabel="serverName" fieldForValue="serverName">
+          | `dmc_get_instances_on_a_machine($machine$)`
+        </populatingSearch>
+        <selectFirstChoice>true</selectFirstChoice>
+      </input>
+      <table id="table1">
+        <searchString>
+| rest splunk_server=$instanceDiskUsageSnapshot$ /services/server/status/partitions-space
+| eval free = if(isnotnull(available), available, free)
+| eval usage = capacity - free 
+| eval pct_usage = floor(usage / capacity * 100) 
+| stats first(fs_type) as fs_type first(capacity) as capacity first(usage) as usage first(pct_usage) as pct_usage by mount_point 
+| eval usage=round(usage / 1024, 2)
+| eval capacity=round(capacity / 1024, 2)
+| rename mount_point as "Mount Point", fs_type as "File System Type", usage as "Usage (GB)", capacity as "Capacity (GB)", pct_usage as "Usage (%)"</searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <html>
+        <h1 id="historical_section_title">Historical Charts</h1>
+      </html>
+      <input type="time" searchWhenChanged="true" token="time">
+        <label>Time Range:</label>
+        <default>
+          <earliestTime>-4h@m</earliestTime>
+          <latestTime>now</latestTime>
+        </default>
+      </input>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>$funcCPULabel$ CPU Usage</title>
+      <input type="dropdown" token="funcCPU" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <choice value="First">Sampled</choice>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <default>Median</default>
+        <change>
+          <condition value="Median">
+            <set token="funcCPULabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="funcCPULabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="funcCPULabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="funcCPULabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="funcCPULabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="funcCPULabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` host=$host$ sourcetype=splunk_resource_usage component=Hostwide
+| `dmc_timechart` $funcCPU$(data.cpu_system_pct) AS "system" $funcCPU$(data.cpu_user_pct) AS "user"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleY.text">CPU Usage (%)</option>
+        <option name="charting.axisY.maximumNumber">100</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.axisTitleX.text">Time</option>
+      </chart>
+    </panel>
+    <panel rejects="$snapshot$">
+      <title>$funcMemLabel$ Physical Memory Usage</title>
+      <input type="dropdown" token="funcMem" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <choice value="First">Sampled</choice>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <default>Median</default>
+        <change>
+          <condition value="Median">
+            <set token="funcMemLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="funcMemLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="funcMemLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="funcMemLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="funcMemLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="funcMemLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` host=$host$ sourcetype=splunk_resource_usage component=Hostwide
+| `dmc_timechart` latest(data.mem) AS "capacity" $funcMem$(data.mem_used) AS "usage"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.lineDashStyle">shortDash</option>
+        <option name="charting.chart.overlayFields">capacity</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.axisTitleY.text">Memory Usage (MB)</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>$funcDiskLabel$ Disk Space</title>
+      <input type="dropdown" token="hostDiskUsageHistorical" searchWhenChanged="true">
+        <label>Instance</label>
+        <showClearButton>false</showClearButton>
+        <populatingSearch fieldForLabel="serverName" fieldForValue="host">
+          | `dmc_get_instances_on_a_machine($machine$)`
+        </populatingSearch>
+        <selectFirstChoice>true</selectFirstChoice>
+        <change>
+          <condition value="*">
+            <set token="splunkServerDiskUsageHistorical">$row.serverName$</set>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="mount_point" searchWhenChanged="true">
+        <label>Mount Point</label>
+        <showClearButton>false</showClearButton>
+        <selectFirstChoice>true</selectFirstChoice>
+        <populatingSearch earliest="0" latest="" fieldForLabel="mount_point" fieldForValue="mount_point">
+          | rest splunk_server=$splunkServerDiskUsageHistorical$ /services/server/status/partitions-space
+          | stats count by mount_point
+        </populatingSearch>
+      </input>
+      <input type="dropdown" token="funcDisk" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <choice value="First">Sampled</choice>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <default>Median</default>
+        <change>
+          <condition value="Median">
+            <set token="funcDiskLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="funcDiskLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="funcDiskLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="funcDiskLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="funcDiskLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="funcDiskLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` host=$hostDiskUsageHistorical$ sourcetype=splunk_disk_objects component=Partitions data.mount_point=$mount_point$
+| eval free = if(isnotnull('data.available'), 'data.available', 'data.free')
+| eval usage = round(('data.capacity' - free) / 1024, 2)
+| eval capacity = round('data.capacity' / 1024, 2)
+| `dmc_timechart_for_disk_usage` latest(capacity) as capacity $funcDisk$(usage) as usage
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.lineDashStyle">shortDash</option>
+        <option name="charting.chart.overlayFields">capacity</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">GB</option>
+      </chart>
+    </panel>
+  </row>
+</form>

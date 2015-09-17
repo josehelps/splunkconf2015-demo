@@ -1,0 +1,274 @@
+<form hideEdit="True" script="common_control.js">
+  <label>Indexing Performance: Deployment</label>
+  <description/>
+  <fieldset autoRun="true" submitButton="false">
+    <input type="dropdown" searchWhenChanged="true" token="group">
+      <label>Group:</label>
+      <showClearButton>false</showClearButton>
+      <populatingSearch fieldForLabel="label" fieldForValue="search_group">
+        | `dmc_get_groups`
+      </populatingSearch>
+      <default>dmc_group_indexer</default>
+    </input>
+  </fieldset>
+  <searchTemplate>
+| rest splunk_server_group=$group$ /services/server/introspection/queues
+| search title=parsingQueue OR title=aggQueue OR title=typingQueue OR title=indexQueue
+| eval fill_perc=round(current_size_bytes / max_size_bytes * 100,2)
+| chart values(fill_perc) over splunk_server by title
+| join type=outer splunk_server [
+  rest splunk_server_group=$group$ /services/server/introspection/indexer
+  | eval average_KBps = round(average_KBps, 0)
+  | eval status = case(reason == ".", status,
+      reason == "", status,
+      isnull(reason), status,
+      1 == 1, status.": ".reason)
+  | fields splunk_server, average_KBps, status]
+| fields splunk_server average_KBps status parsingQueue aggQueue typingQueue indexQueue
+| sort -average_KBps
+  </searchTemplate>
+  <row>
+    <panel>
+      <html>
+        <h2>
+          <span>Select views: </span>
+          <span id="link-switcher-view">
+            <a href="#" class="btn-pill active" data-item="all">All</a>
+            <a href="#" class="btn-pill" data-item="snapshot">Snapshot</a>
+            <a href="#" class="btn-pill" data-item="historical">Historical</a>
+          </span>
+        </h2>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <html>
+        <h1 id="snapshot_section_title">Snapshots</h1>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>Overview of Indexing Performance</title>
+      <single>
+        <searchPostProcess>stats count</searchPostProcess>
+        <option name="underLabel">Indexers</option>
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+      <single>
+        <searchPostProcess>stats sum(average_KBps)</searchPostProcess>
+        <option name="underLabel">Total Indexing Rate</option>
+        <option name="afterLabel">KB/s</option>
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+      <single>
+        <searchPostProcess>stats avg(average_KBps) as avg_indexing_rate | eval avg_indexing_rate = round(avg_indexing_rate, 0)</searchPostProcess>
+        <option name="underLabel">Average Indexing Rate</option>
+        <option name="afterLabel">KB/s</option>
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+      <single>
+        <searchPostProcess>stats median(average_KBps)</searchPostProcess>
+        <option name="underLabel">Median Indexing Rate</option>
+        <option name="afterLabel">KB/s</option>
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>Indexing Performance by Instance</title>
+      <table>
+        <searchPostProcess>
+rename splunk_server as Instance, average_KBps as "Indexing Rate (KB/s)", status as "Status", parsingQueue as "Parsing Queue Fill Ratio (%)", aggQueue as "Aggregation Queue Fill Ratio (%)", "typingQueue" as "Typing Queue Fill Ratio (%)", indexQueue as "Indexing Queue Fill Ratio (%)"
+        </searchPostProcess>
+        <option name="list.drilldown">full</option>
+        <option name="list.wrap">1</option>
+        <option name="maxLines">5</option>
+        <option name="raw.drilldown">full</option>
+        <option name="rowNumbers">false</option>
+        <option name="table.drilldown">all</option>
+        <option name="table.wrap">1</option>
+        <option name="type">list</option>
+        <option name="wrap">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <drilldown>
+          <condition field="Instance">
+            <link target="_self">
+              <![CDATA[indexing_performance_instance?form.splunk_server=$click.value2$]]>
+            </link>
+          </condition>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <html>
+        <p>Click instance name for more details. </p>
+        <p>Indexing rate measured over 30 seconds every 30 seconds (available with Splunk Enterprise 6.2 or later indexers).</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <input type="time" searchWhenChanged="true" token="time">
+        <label>Time Range:</label>
+        <default>
+          <earliestTime>-4h@m</earliestTime>
+          <latestTime>now</latestTime>
+        </default>
+      </input>
+      <html>
+        <h1 id="historical_section_title">Historical Charts</h1>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Instances by Estimated Indexing Rate</title>
+      <chart>
+        <searchString>
+`dmc_set_index_internal` source=*metrics.log* sourcetype=splunkd search_group=$group$ group=thruput
+| `dmc_timechart_for_metrics_log` partial=f limit=0 per_second(kb) AS kbps by host
+| untable _time host kbps
+| eval kbps = round(kbps,0)
+| `dmc_indexing_rate_rangemap_and_timechart`
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_indexing_performance_deployment_indexing_rate("$group$", $span$, $click.name2$)`&description=Metric: indexing rate range: $click.name2$]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by indexing rate over time.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Instances by $funcQueueLabel$ Queue Fill Ratio</title>
+      <input type="dropdown" token="queueType" searchWhenChanged="true">
+        <label>Queue</label>
+        <choice value="splunktcpin">Splunk Tcpin Queue</choice>
+        <choice value="parsingqueue">Parsing Queue</choice>
+        <choice value="aggqueue">Aggregation Queue</choice>
+        <choice value="typingqueue">Typing Queue</choice>
+        <choice value="indexqueue">Indexing Queue</choice>
+        <choice value="tcpout* | eval name=if(like(name,&quot;tcpout_%&quot;),&quot;tcpout&quot;,name)">Tcpout Queue(s) - Consolidated</choice>
+        <default>indexqueue</default>
+        <showClearButton>false</showClearButton>
+      </input>
+      <input type="dropdown" token="funcQueue" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <choice value="First">Sampled</choice>
+        <default>Median</default>
+        <change>
+          <condition value="Median">
+            <set token="funcQueueLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="funcQueueLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="funcQueueLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="funcQueueLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="funcQueueLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="funcQueueLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_internal` sourcetype=splunkd source=*metrics.log search_group=$group$ group=queue name=$queueType$
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
+| eval fill_perc=round((curr/max)*100,2)
+| bin _time minspan=30s
+| stats $funcQueue$(fill_perc) AS "fill_percentage" by host, _time
+| `dmc_queue_fill_ratio_rangemap_and_timechart`
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_indexing_performance_deployment_queue_fill_ratio("$group$", $span$, $queueType$, $funcQueue$, $click.name2$)`&description=Metric: $funcQueue$ $queueType$ fill ratio range: $click.name2$]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by $funcQueueLabel$ fill ratio of the selected queue over time.</p>
+      </html>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,45 @@
+.preload .dashboard-header.clearfix:after {
+	content: "" !important;
+}
+
+#edit-alerts-dialog .edit-alerts-modal-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#edit-alerts-dialog .edit-alerts-modal-title span.alert-name-title {
+    position: relative;
+    left:125px;
+}
+
+#edit-alerts-dialog .edit-alerts-modal-title span.enabled-title {
+    position: relative;
+    left: 310px;
+}
+
+#edit-alerts-dialog p.alert-description {
+    text-align: left;
+    width: 320px;
+    font-size: 10px
+    font-weight: lighter;
+    font-style: italic;
+    margin-bottom: 5px;
+}
+
+#edit-alerts-dialog .form-horizontal .controls {
+    margin-left: 380px;
+    position: relative;
+}
+
+#edit-alerts-dialog .form-horizontal .control-label {
+    width: 320px;
+    text-align: left;
+}
+
+#edit-alerts-dialog .modal-header {
+    padding: 15px 0 10px 20px;
+}
+
+#edit-alerts-dialog  .modal-body {
+    padding-top: 10px;
+}

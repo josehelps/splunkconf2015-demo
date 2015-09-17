@@ -1,0 +1,326 @@
+<form hideEdit="True" isVisible="true" onUnloadCancelJobs="true" stylesheet="custom_layout_overlay_single.css" script="common_control.js">
+  <label>Indexing Performance: Instance</label>
+  <fieldset autoRun="true" submitButton="false">
+    <input type="dropdown" searchWhenChanged="true" token="splunk_server">
+      <label>Instance:</label>
+      <showClearButton>false</showClearButton>
+      <populatingSearch fieldForLabel="serverName" fieldForValue="serverName">
+        | `dmc_get_instance_info($dmc_group$)`
+      </populatingSearch> 
+      <selectFirstChoice>true</selectFirstChoice>
+      <change>
+        <condition value="*">
+          <set token="host">$row.host$</set>
+        </condition>
+      </change>
+    </input>
+    <input type="radio" searchWhenChanged="true" token="dmc_group">
+      <label></label>
+      <choice value="dmc_group_indexer">Indexers only</choice>
+      <choice value="*">All instances</choice>
+      <default>dmc_group_indexer</default>
+    </input>
+  </fieldset>
+  <searchTemplate>
+| rest splunk_server=$splunk_server$ /services/server/introspection/queues 
+| eval EWMA_fill_perc = exp_wt_avg_sz_1 / max_size_bytes * 100 
+| eval current_fill_perc = current_size_bytes / max_size_bytes * 100 
+| stats first(current_fill_perc) AS fill_perc by title
+| eval fill_perc=round(fill_perc, 1)
+  </searchTemplate>
+  <row>
+    <panel>
+      <html>
+        <h2>
+          <span>Select views: </span>
+          <span id="link-switcher-view">
+            <a href="#" class="btn-pill active" data-item="all">All</a>
+            <a href="#" class="btn-pill" data-item="snapshot">Snapshot</a>
+            <a href="#" class="btn-pill" data-item="historical">Historical</a>
+          </span>
+        </h2>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <html>
+        <h1 id="snapshot_section_title">Snapshots</h1>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>Splunk Enterprise Data Pipeline</title>
+      <single id="parsing_queue">
+        <searchPostProcess>| where title="parsingQueue" | fields fill_perc</searchPostProcess>
+        <earliestTime>$earliest$</earliestTime>
+        <latestTime>$latest$</latestTime>
+        <!--<option name="underLabel">Queue Fill Ratio</option>-->
+        <!--<option name="afterLabel">%</option>-->
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+      <single id="merging_queue">
+        <searchPostProcess>| where title="aggQueue" | fields fill_perc</searchPostProcess>
+        <earliestTime>$earliest$</earliestTime>
+        <latestTime>$latest$</latestTime>
+        <!--<option name="underLabel">Queue Fill Ratio</option>-->
+        <!--<option name="afterLabel">%</option>-->
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+      <single id="typing_queue">
+        <searchPostProcess>| where title="typingQueue" | fields fill_perc</searchPostProcess>
+        <earliestTime>$earliest$</earliestTime>
+        <latestTime>$latest$</latestTime>
+        <!--<option name="underLabel">Queue Fill Ratio</option>-->
+        <!--<option name="afterLabel">%</option>-->
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+      <single id="index_queue">
+        <searchPostProcess>| where title="indexQueue" | fields fill_perc</searchPostProcess>
+        <earliestTime>$earliest$</earliestTime>
+        <latestTime>$latest$</latestTime>
+        <!--<option name="underLabel">Queue Fill Ratio</option>-->
+        <!--<option name="afterLabel">%</option>-->
+        <option name="refresh.time.visible">false</option>
+        <option name="refresh.auto.interval">60</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>Indexing Overview</title>
+      <table>
+        <searchString>
+| rest splunk_server=$splunk_server$ /services/server/introspection/indexer
+| eval status = case(reason == ".", status,
+  reason == "", status,
+  isnull(reason), status,
+  1 == 1, status.": ".reason)
+| fields splunk_server, average_KBps, status  
+| eval average_KBps = round(average_KBps, 0)
+| rename splunk_server as Instance, average_KBps as "Indexing Rate (KB/s)", status as Status, reason as Reason
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="list.drilldown">full</option>
+        <option name="list.wrap">1</option>
+        <option name="maxLines">5</option>
+        <option name="raw.drilldown">full</option>
+        <option name="rowNumbers">false</option>
+        <option name="table.drilldown">all</option>
+        <option name="table.wrap">1</option>
+        <option name="type">list</option>
+        <option name="wrap">true</option>
+        <option name="dataOverlayMode">heatmap</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <html>
+        <p>Indexing rate measured over 30 seconds every 30 seconds (available with Splunk Enterprise 6.2 or later indexers).</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <html>
+        <h1 id="historical_section_title">Historical Charts</h1>
+      </html>
+      <input type="time" searchWhenChanged="true" token="time">
+        <label>Time Range:</label>
+        <default>
+          <earliestTime>-4h@m</earliestTime>
+          <latestTime>now</latestTime>
+        </default>
+      </input>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Estimated Indexing Rate Per $groupTypeIdxPerf$</title>
+      <input type="dropdown" searchWhenChanged="true" token="groupTypeIdxPerf">
+        <label>Split by</label>
+        <showClearButton>false</showClearButton>
+        <default>Sourcetype</default>
+        <choice value="Sourcetype">Sourcetype</choice>
+        <choice value="Index">Index</choice>
+        <choice value="Host">Host</choice>
+        <choice value="Source">Source</choice>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_internal` host=$host$ source="*metrics.log" sourcetype=splunkd group=per_$groupTypeIdxPerf$_thruput
+| `dmc_timechart_for_metrics_log` per_second(kb) by series useother=false limit=15
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Indexing Rate (KB/s)</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>$funcQueueLabel$ Fill Ratio of Data Processing Queues</title>
+      <input type="dropdown" searchWhenChanged="true" token="queues">
+        <label>Queues to Measure:</label>
+        <showClearButton>false</showClearButton>
+        <default>(name=parsingqueue OR name=aggqueue OR name=typingqueue OR name=indexqueue) | eval name=case(name=="aggqueue","2 - Aggregation Queue",name=="indexqueue","4 - Indexing Queue",name=="parsingqueue","1 - Parsing Queue",name=="typingqueue","3 - Typing Queue")</default>
+        <choice value="(name=parsingqueue OR name=aggqueue OR name=typingqueue OR name=indexqueue) | eval name=case(name==&quot;aggqueue&quot;,&quot;2 - Aggregation Queue&quot;,name==&quot;indexqueue&quot;,&quot;4 - Indexing Queue&quot;,name==&quot;parsingqueue&quot;,&quot;1 - Parsing Queue&quot;,name==&quot;typingqueue&quot;,&quot;3 - Typing Queue&quot;)">Event-Processing Queues</choice>
+        <choice value="">All Queues</choice>
+      </input>
+      <input type="dropdown" searchWhenChanged="true" token="functionQueue">
+        <label>Function:</label>
+        <showClearButton>false</showClearButton>
+        <default>Median</default>
+        <choice value="Median">Median</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <choice value="Avg">Average</choice>
+        <choice value="Max">Maximum</choice>
+        <change>
+          <condition value="Median">
+            <set token="funcQueueLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="funcQueueLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="funcQueueLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="funcQueueLabel">Maximum</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_internal` host=$host$ source=*metrics.log sourcetype=splunkd group=queue $queues$
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size) 
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size) 
+| eval fill_perc=round((curr/max)*100,2) 
+| `dmc_timechart_for_metrics_log` $functionQueue$(fill_perc) by name useother=false limit=15
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.chart">area</option>
+        <option name="height">500px</option>
+        <option name="charting.layout.splitSeries">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Fill Ratio (%)</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.maximumNumber">100</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Estimated CPU Usage per Splunk Processor</title>
+      <chart>
+        <searchString>
+`dmc_set_index_internal` host=$host$ source=*metrics.log sourcetype=splunkd group=pipeline NOT processor=sendout
+| `dmc_timechart_for_metrics_log` per_second(eval(cpu_seconds*100)) AS pctCPU by processor useother=false limit=15
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">CPU Usage (%)</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Aggregate CPU Seconds Spent per Indexer Processor Activity</title>
+      <input type="radio" token="searchStringIndexer" searchWhenChanged="true">
+        <label/>
+        <choice value='group=pipeline name=indexerpipe processor=indexer | `dmc_timechart_for_metrics_log` sum(write_cpu_seconds) AS "raw data write" sum(service_cpu_seconds) AS "index service"'>All</choice>
+        <choice value="group=subtask_seconds | fields replicate_semislice, sync_hotBkt, throttle_optimize, flushBlockSig, retryMove_1hotBkt, size_hotBkt, roll_hotBkt, chillOrFreeze, update_checksums, fork_recovermetadata, rebuild_metadata, update_bktManifest, service_volumes, service_maxSizes, service_externProc | `dmc_timechart_for_metrics_log` sum(*) AS *">Split index service by subtask</choice>
+        <default>group=pipeline name=indexerpipe processor=indexer | `dmc_timechart_for_metrics_log` sum(write_cpu_seconds) AS "raw data write" sum(service_cpu_seconds) AS "index service"</default>
+      </input>
+      <chart>
+        <searchString>`dmc_set_index_internal` host=$host$ source=*metrics.log sourcetype=splunkd $searchStringIndexer$</searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">CPU seconds</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+</form>

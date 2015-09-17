@@ -1,0 +1,538 @@
+<form hideEdit="True" script="common_control.js">
+  <label>KV Store: Deployment</label>
+  <description/>
+  <row>
+    <panel>
+      <html>
+        <h2>
+          <span>Select views: </span>
+          <span id="link-switcher-view">
+            <a href="#" class="btn-pill active" data-item="all">All</a>
+            <a href="#" class="btn-pill" data-item="snapshot">Snapshot</a>
+            <a href="#" class="btn-pill" data-item="historical">Historical</a>
+          </span>
+        </h2>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <html>
+        <h1 id="snapshot_section_title">Snapshots</h1>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>KV Store Status</title>
+      <table>
+        <searchString>
+| rest splunk_server_group=dmc_group_kv_store /services/server/introspection/kvstore/serverstatus
+| eval Instance=splunk_server
+| spath input=data
+| eval network=round(abs(('network.bytesIn'+'network.bytesOut')/1024/1024), 2)
+| rename globalLock.lockTime AS globalLock, globalLock.totalTime AS total
+| eval lock=round(abs(globalLock*100/total), 2)
+| rename opcounters.command as c, opcounters.update as u, opcounters.queries as q, opcountes.deletes as d, opcounters.getmore as g, opcounters.inserts as i
+| eval totalops=if(isNotNull('c'), 'c',0)+if(isNotNull('u'), 'u', 0)+if(isNotNull('q'), 'q', 0)+if(isNotNull('d'), 'd', 0)+if(isNotNull('g'), 'g', 0)+if(isNotNull('i'), 'i', 0)
+| eval pf=round(abs('extra_info.page_faults'/totalops), 2)
+| eval flush='backgroundFlushing.last_ms'
+| eval hours=toString(round(uptime/3600, 2))
+| rename repl.ismaster as rstate
+| rename repl.secondary as secondary
+| eval replstate=if(rstate=="true", "Primary", if(secondary=="true", "Secondary", "N/A"))
+| stats first(mem.resident) AS "Physical Memory Usage (MB)" first(mem.mappedWithJournal) AS "Mapped Memory Usage (MB)" first(pf) AS "Page Faults per Operation" first(globalLock.currentQueue.total) AS "Total Queued" first(connections.current) AS "Active Connections" first(lock) AS "Lock (%)" first(flush) AS "Last Flush (ms)" first(network) AS "Network Traffic (MB)" first(hours) AS "Uptime (hours)"  first(replstate) AS "Replication Role" by Instance
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <drilldown>
+          <condition field="Instance">
+            <link target="_self">
+              <![CDATA[kv_store_instance?form.splunk_server=$click.value2$]]>
+            </link>
+          </condition>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <html>
+        <p>Click instance name for more details. Total queued is operations (readers and writers) waiting for a read or write lock to be cleared.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <input type="time" searchWhenChanged="true" token="time">
+        <label>Time Range:</label>
+        <default>
+          <earliestTime>-4h@m</earliestTime>
+          <latestTime>now</latestTime>
+        </default>
+      </input>
+      <html>
+        <h1 id="historical_section_title">Historical Charts</h1>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Instances by $countPageFaultsFuncLabel$ Page Fault per Operation</title>
+      <input type="dropdown" token="countPageFaultsFunc" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <default>Median</default>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <choice value="First">Sampled</choice>
+        <change>
+          <condition value="Median">
+            <set token="countPageFaultsFuncLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="countPageFaultsFuncLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="countPageFaultsFuncLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="countPageFaultsFuncLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="countPageFaultsFuncLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="countPageFaultsFuncLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstoreserverstats
+| eval server = host   
+| rename data.opcounters.command as c, data.opcounters.update as u, data.opcounters.queries as q, data.opcountes.deletes as d, data.opcounters.getmore as g, data.opcounters.inserts as i | eval commands=if(isNotNull('c'), 'c',0) 
+| eval totalops=if(isNotNull('c'), 'c',0)+if(isNotNull('u'), 'u', 0)+if(isNotNull('q'), 'q', 0)+if(isNotNull('d'), 'd', 0)+if(isNotNull('g'), 'g', 0)+if(isNotNull('i'), 'i', 0)
+| bin _time minspan=30s 
+| stats latest(totalops) AS ops latest(data.extra_info.page_faults) AS pf by server _time
+| eval  percent=if(ops==0, 0, round(abs(pf/ops), 2))
+| bin _time minspan=30s 
+| stats $countPageFaultsFunc$(percent) as percent by server _time
+| rangemap field=percent "0-0.7"=0-0.7 "0.7-1.3"=0.7001-1.3 "1.3+"=1.3001-999999 default=abnormal
+| timechart minspan=30s partial=f dc(server) as server_count by range
+| fields _time, "1.3+", "0.7-1.3", "0-0.7"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.fieldColors">{"1.3+": 0xF7902B, "0.7-1.3": 0xFAC51C, "0-0.7":0x9AC23C, "abnormal":0xC4C4C0}</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_kv_store_deployment_page_faults($span$, $countPageFaultsFunc$, $click.name2$)`&description=Metric: $countPageFaultsFunc$ page fault range: $click.name2$]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by $countPageFaultsFuncLabel$ page fault per operation over time.</p>
+      </html>
+    </panel>
+    <panel rejects="$snapshot$">
+      <title>Instances by $countLockFuncLabel$ Lock Time Percentage</title>
+      <input type="dropdown" token="countLockFunc" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <default>Median</default>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <choice value="First">Sampled</choice>
+        <change>
+          <condition value="Median">
+            <set token="countLockFuncLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="countLockFuncLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="countLockFuncLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="countLockFuncLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="countLockFuncLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="countLockFuncLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstoreserverstats
+| eval server = host
+| bin _time minspan=30s  
+| stats range(data.globalLock.lockTime) AS globalLock range(data.globalLock.totalTime) AS total by server _time 
+| eval percent=abs(globalLock*100/total)   
+| bin _time minspan=30s 
+| stats $countLockFunc$(percent) as percent_locked by server _time 
+| rangemap field=percent_locked "0-30%"=0-30 "30-50%"=30-50 "50-100%"=50-1000 default=abnormal  
+| timechart minspan=30s partial=f dc(server) as server_count by range
+| fields _time, "50-100%", "30-50%", "0-30%"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.fieldColors">{"50-100%": 0xD85D3C, "30-50%": 0xF7902B, "0-30%":0x9AC23C, "abnormal":0xC4C4C0}</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_kv_store_deployment_lock_percentage($span$, $countLockFunc$, $click.name2$)`&description=Metric: $countLockFunc$ lock percent range: $click.name2$]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by $countLockFuncLabel$ lock time percentage.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Deployment-wide KV Store Network Traffic</title>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstoreserverstats
+| eval source=host
+| bin _time minspan=30s  
+| stats range(data.network.bytesIn) as indiff range(data.network.bytesOut) as outdiff by source _time
+| eval t=abs((indiff+outdiff)/1024/1024) 
+| bin _time minspan=30s 
+| stats sum(t) AS Traffic by _time  
+| timechart minspan=30s avg(Traffic) AS Traffic
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Total traffic (MB)</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <drilldown>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_kv_store_deployment_network`&description=Metric: Network traffic]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Total inbound and outbound network traffic attributed to the use of KV stores across all instances in the deployment.</p>
+      </html>
+    </panel>
+    <panel rejects="$snapshot$">
+      <title>Instances by Virtual to Mapped Memory Ratio</title>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstoreserverstats
+| eval source=host 
+| eval ratio='data.mem.virtual'/'data.mem.mappedWithJournal' 
+| bin _time minspan=30s 
+| stats avg(ratio) AS myratio by source _time  
+| rangemap field=myratio "0-2x"=0-2 "2-3x"=2-3 ">3x"=3-10000 default=abnormal 
+| timechart minspan=30s partial=f dc(source) as server_count by range
+| fields _time ">3x", "2-3x", "0-2x"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.fieldColors">{">3x": 0xD85D3C, "2-3x": 0xF7902B, "0-2x":0x9AC23C, "abnormal":0xC4C4C0}</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_kv_store_deployment_memory_ratio($span$, $click.name2$)`&description=Metric: Virtual to mapped memory ratio: $click.name2$]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by ratio of virtual memory to mapped memory.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Instances by Average Replication Latency</title>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstorereplicasetstats data.replSetStats.myState!=1
+| bin _time minspan=1m 
+| stats max(data.oplogInfo.end) AS local by _time host 
+| join _time 
+  [ search `dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstorereplicasetstats data.replSetStats.myState=1
+  | bin _time minspan=1m 
+  | stats max(data.oplogInfo.end) AS primary by _time]
+| eval difference=(primary-local)/1000
+| stats avg(difference) AS lag by host _time
+| rangemap field=lag "0-10s"=0-10 "10-30s"=10-30 ">30s"=30-10000000 default="abnormal" 
+| timechart minspan=1m partial=f dc(host) as server_count by range 
+| fields _time ">30s", "10-30s", "0-10s"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.fieldColors">{">30s": 0xD85D3C, "10-30s": 0xF7902B, "0-10s":0x9AC23C, "abnormal":0xC4C4C0}</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_kv_store_deployment_replication_lag($span$, $click.name2$)`&description=Metric: Replication lag range: $click.name2$ seconds]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by average latency of data replication between KV stores.</p>
+      </html>
+    </panel>
+    <panel rejects="$snapshot$">
+      <title>Operations Log Window of KV Store Captain</title>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstorereplicasetstats data.replSetStats.myState=1
+| eval source=host 
+| bin _time minspan=1m  
+| rename data.oplogInfo.start as start, data.oplogInfo.end as end
+| eval diff=(end-start)/36000000 
+| timechart minspan=1m avg(diff) AS hours
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Window (hours)</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <drilldown>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_kv_store_primary_oplog_window`&description=Metric: Primary Oplog Window]]>
+          </link>
+        </drilldown>
+      </chart>     
+      <html>
+        <p>Operations log window size is the length of time between the first and last operations in the oplog.</p>
+      </html>
+    </panel> 
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Instances by Percent of Each Minute Spent Flushing to Disk</title>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=dmc_group_kv_store component=kvstoreserverstats
+| bin _time minspan=30s
+| stats range(data.backgroundFlushing.total_ms)  AS diff by _time host
+| timechart minspan=30s per_minute(diff) as ms_per_min by host
+| untable _time host ms_per_min
+| eval percent = ms_per_min / (60 * 1000) * 100
+| rangemap field=percent "0-10%"=0-10 "10-50%"=10-50 "50-100%"=50-100 default=abnormal
+| timechart minspan=30s partial=f dc(host) as server_count by range
+| fields _time, "50-100%", "10-50%", "0-10%"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.fieldColors">{"50-100%": 0xD85D3C, "10-50%": 0xF7902B, "0-10%":0x9AC23C, "abnormal":0xC4C4C0}</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_kv_store_deployment_background_flush($span$, $click.name2$)`&description=Metric: Flushing rate range: $click.name2$]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Percent is the percentage of 60 seconds KV Store takes to flush writes to disk.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Slowest Operations</title>
+      <table>
+        <searchString>
+`dmc_set_index_internal` search_group=dmc_group_kv_store source="*mongod.log" conn* *ms 
+| rex field=_raw "[^\[]* (?&lt;Operation&gt;(.|\s)+[^\d+ms])(?&lt;ms&gt;(\d)+)" 
+| sort ms desc 
+| head 10 
+| rename ms AS "Duration (ms)" 
+<!--| eval Timestamp=strftime(_time, "%Y-%m-%d %H:%M:%S")-->
+| eval Instance=host
+| table "Duration (ms)" Instance _time Operation
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+         <drilldown>
+          <condition field="Instance">
+            <link target="_self">
+              <![CDATA[kv_store_instance?form.splunk_server=$click.value2$]]>
+            </link>
+          </condition>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

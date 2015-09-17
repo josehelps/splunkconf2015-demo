@@ -1,0 +1,19 @@
+[server/sslConfig]
+version = 6.2.6
+modtime = 1442455874.259257000
+
+[server/lmpool%3Aauto_generated_pool_download-trial]
+version = 6.2.6
+modtime = 1442455876.103028000
+
+[server/lmpool%3Aauto_generated_pool_forwarder]
+version = 6.2.6
+modtime = 1442455876.105875000
+
+[server/lmpool%3Aauto_generated_pool_free]
+version = 6.2.6
+modtime = 1442455876.108681000
+
+[server/general]
+version = 6.2.6
+modtime = 1442455876.152202000

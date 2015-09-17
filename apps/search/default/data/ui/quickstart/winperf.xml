@@ -1,0 +1,36 @@
+<quickstart>
+
+    <title>Windows performance metrics</title>
+    <optiongroup>
+
+        <option platforms="Windows">
+            <title>Collect Windows performance metrics from this Splunk server</title>
+            <summary>Configure Splunk to index Windows performance metrics from this machine.</summary>
+            <doctarget>[learnmore.recipes.windows.perfmon]</doctarget>
+            <action type="add_perfmon">
+                <label>Next</label>
+            </action>
+        </option>
+        
+        <option platforms="Windows">
+            <title>Collect Windows performance metrics from another machine</title>
+            <summary>Use WMI to collect Windows performance counters and metrics from other machines.</summary>
+            <doctarget>[learnmore.recipes.windows.wmi]</doctarget>
+            <action type="add_wmi">
+                <label>Next</label>
+            </action>
+        </option>
+
+        <option platforms="Unix">
+            <title>Forward Windows performance metrics from another machine</title>
+            <summary>Use Splunk's universal forwarder to forward data from remote machines to this Splunk server.</summary>
+            <doctarget>[learnmore.recipes.forwarder]</doctarget>
+            <action type="href">
+                <label>Download the universal forwarder</label>
+                <target>http://splunk.com/r/universalforwarder</target>
+            </action>
+        </option>
+              
+    </optiongroup>
+
+</quickstart>

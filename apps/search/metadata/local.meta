@@ -1,0 +1,14 @@
+[props/ansible]
+owner = admin
+version = 6.2.6
+modtime = 1442456504.718411000
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flog%2Fansible.log]
+owner = admin
+version = 6.2.6
+modtime = 1442456519.656325000
+
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fbin%2Fscripts%2Fwhatschanged.sh%20%2Fetc%2Fansible]
+owner = admin
+version = 6.2.6
+modtime = 1442458440.361223000

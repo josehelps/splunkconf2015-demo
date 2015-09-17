@@ -1,0 +1,20 @@
+<nav color="#65A637">
+  <view name="Overview" default="true" />
+  <collection label="Indexing Performance">
+    <view name="indexing_performance_instance" />
+  </collection>
+  <collection label="Search Activity">
+    <view name="search_activity_instance" />
+    <view name="search_usage_statistics" />
+  </collection>
+  <collection label="Resource Usage">
+    <view name="resource_usage_instance" />
+    <view name="resource_usage_machine" />
+  </collection>
+  <collection label="KV Store">
+    <view name="kv_store_instance" />
+  </collection>
+  <view name="Licensing" />
+  <view name="managementconsole_configure" />
+  <view name="search" />
+</nav>

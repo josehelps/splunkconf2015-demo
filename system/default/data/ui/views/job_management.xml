@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<view isVisible="false" template="jobs.html">
+    <label>Jobs</label>
+    <module name="Message" layoutPanel="messaging">
+        <param name="filter">*</param>
+        <param name="clearOnJobDispatch">False</param>
+        <param name="maxSize">1</param>
+    </module>
+    <module name="AccountBar" layoutPanel="appHeader">
+        <param name="mode">popup</param>
+        <param name="popupTitle">Job manager</param>
+    </module>
+    <module name="LiteBar" layoutPanel="liteHeader"></module>
+    <module name="EntitySelectLister" layoutPanel="filterControlLeft">
+        <param name="entityPath">apps/local</param>
+        <param name="label">App</param>
+        <param name="settingToCreate">namespace_setting</param>
+	    <param name="selected">{app}</param>
+        <param name="selectUsingValue">True</param>
+        <param name="entityFieldsToDisplay">
+            <list>
+                <param name="multiLabel">%(label)s (%(name)s)</param>
+                <param name="multiLabelAlt">%(name)s (%(name)s)</param>
+                <param name="value">name</param>
+            </list>
+        </param>
+        <param name="staticFieldsToDisplay">
+            <list>
+                <param name="label">All</param>
+                <param name="value">*</param>
+            </list>
+            <list>
+                <param name="label">Splunk Dispatcher (splunk-system-user)</param>
+                <param name="value">splunk-system-user</param>
+            </list>
+        </param>
+        <param name="postProcess">disabled=false</param>
+        <module name="EntitySelectLister" layoutPanel="filterControlLeft">
+            <param name="entityPath">admin/users</param>
+    	    <param name="selected">{user}</param>
+            <param name="selectUsingValue">True</param>
+            <param name="label">Owner</param>
+            <param name="settingToCreate">owner_setting</param>
+            <param name="count">250</param>
+            <param name="entityFieldsToDisplay">
+                <list>
+                    <param name="multiLabel">%(realname)s (%(name)s)</param>
+                    <param name="multiLabelAlt">%(name)s (%(name)s)</param>
+                    <param name="value">name</param>
+                </list>
+            </param>
+            <param name="staticFieldsToDisplay">
+                <list>
+                    <param name="label">All</param>
+                    <param name="value">*</param>
+                </list>
+            </param>
+            <module name="StaticSelect" layoutPanel="filterControlLeft">
+                <param name="label">Status</param>
+                <param name="settingToCreate">status_setting</param>
+                <param name="staticFieldsToDisplay">
+                    <list>
+                        <param name="label">All</param>
+                        <param name="value">*</param>
+                    </list>
+                    <list>
+                        <param name="label">Running</param>
+                        <param name="value">running</param>
+                    </list>
+                    <list>
+                        <param name="label">Done</param>
+                        <param name="value">done</param>
+                    </list>
+                    <list>
+                        <param name="label">Paused</param>
+                        <param name="value">paused</param>
+                    </list>
+                    <list>
+                        <param name="label">Finalized</param>
+                        <param name="value">finalized</param>
+                    </list>
+                </param>
+                <module name="SearchTextSetting" layoutPanel="filterControlRight" autoRun="True">
+                    <param name="elementName">search</param>
+                    <param name="settingName">results.search</param>
+                    <module name="SubmitButton" layoutPanel="filterControlRight">
+                        <param name="allowSoftSubmit">True</param>
+                        <module name="Count" layoutPanel="panel_row4_col1">
+                            <param name="options">
+                                <list>
+                                    <param name="text">10</param>
+                                    <param name="selected">True</param>
+                                    <param name="value">10</param>
+                                </list>
+                                <list>
+                                    <param name="text">20</param>
+                                    <param name="value">20</param>
+                                </list>
+                                <list>
+                                    <param name="text">30</param>
+                                    <param name="value">30</param>
+                                </list>
+                                <list>
+                                    <param name="text">40</param>
+                                    <param name="value">40</param>
+                                </list>
+                                <list>
+                                    <param name="text">50</param>
+                                    <param name="value">50</param>
+                                </list>
+                            </param>
+                            <module name="Paginator" layoutPanel="panel_row4_col1">
+                                <param name="count">10</param>
+                                <param name="entityName">settings</param>
+                                <param name="maxPages">10</param>
+                                <module name="JobManager" layoutPanel="resultsArea">
+                                    <param name="ownerSetting">owner_setting</param>
+                                    <param name="namespaceSetting">namespace_setting</param>
+                                    <param name="jobStatusSetting">status_setting</param>
+                                </module>
+                            </module>
+                        </module>
+                        <module name="Message" layoutPanel="panel_row3_col1">
+                            <param name="filter">splunk.module.job_manager</param>
+                            <param name="clearOnJobDispatch">False</param>
+                            <param name="maxSize">1</param>
+                        </module>
+                    </module>
+                </module>
+            </module>
+        </module>
+    </module>
+</view>

@@ -1,0 +1,5 @@
+peerURI,serverName,host,machine,"search_group","__mv_peerURI","__mv_serverName","__mv_host","__mv_machine","__mv_search_group"
+localhost,"ansible-server","ansible-server","ansible-server","dmc_group_indexer",,,,,
+localhost,"ansible-server","ansible-server","ansible-server","dmc_group_kv_store",,,,,
+localhost,"ansible-server","ansible-server","ansible-server","dmc_group_license_master",,,,,
+localhost,"ansible-server","ansible-server","ansible-server","dmc_group_search_head",,,,,

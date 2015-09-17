@@ -1,0 +1,257 @@
+<form hideEdit="True" script="common_control.js">
+  <label>Search Activity: Deployment</label>
+  <description/>
+  <fieldset autoRun="true" submitButton="false">
+    <input type="dropdown" searchWhenChanged="true" token="group">
+      <label>Group</label>
+      <showClearButton>false</showClearButton>
+      <populatingSearch fieldForLabel="label" fieldForValue="search_group">
+        | `dmc_get_groups`
+      </populatingSearch>
+      <default>dmc_group_search_head</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <html>
+        <h2>
+          <span>Select views: </span>
+          <span id="link-switcher-view">
+            <a href="#" class="btn-pill active" data-item="all">All</a>
+            <a href="#" class="btn-pill" data-item="snapshot">Snapshot</a>
+            <a href="#" class="btn-pill" data-item="historical">Historical</a>
+          </span>
+        </h2>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <html>
+        <h1 id="snapshot_section_title">Snapshots</h1>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>Search Activity by Instance</title>
+      <table>
+        <searchString>
+| rest splunk_server_group=$group$ /services/server/status/resource-usage/splunk-processes
+| eval search_pct_cpu  = if(isnotnull('search_props.sid'), pct_cpu, 0)
+| eval search_mem_used = if(isnotnull('search_props.sid'), mem_used, 0)
+| stats dc(search_props.sid) as search_count, sum(search_pct_cpu) as sum_pct_cpu, sum(search_mem_used) as sum_mem_used by splunk_server
+| eval sum_pct_cpu  = round(sum_pct_cpu, 2)
+| eval sum_mem_used = round(sum_mem_used, 2)
+| sort -search_count, -sum_pct_cpu
+| rename splunk_server as Instance, search_count as "Count of Searches", sum_pct_cpu as "CPU Usage (%)", sum_mem_used as "Memory Usage (MB)"
+        </searchString>
+        <earliestTime>-4h@m</earliestTime>
+        <latestTime>now</latestTime>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <drilldown>
+          <condition field="Instance">
+            <link target="_self">
+              <![CDATA[search_activity_instance?form.splunk_server=$click.value2$]]>
+            </link>
+          </condition>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <html>
+        <p>Click on instance name for more details.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <html>
+        <h1 id="historical_section_title">Historical Charts</h1>
+      </html>
+      <input type="time" searchWhenChanged="true" token="time">
+        <label>Time Range:</label>
+        <default>
+          <earliestTime>-4h@m</earliestTime>
+          <latestTime>now</latestTime>
+        </default>
+      </input>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Instances by $searchFuncLabel$ Search Concurrency</title>
+      <input type="dropdown" token="searchFunc" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <default>Median</default>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th percentile</choice>
+        <choice value="First">Sampled</choice>
+        <change>
+          <condition value="Median">
+            <set token="searchFuncLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="searchFuncLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="searchFuncLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="searchFuncLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="searchFuncLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="searchFuncLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=$group$ sourcetype=splunk_resource_usage ((component=PerProcess data.search_props.sid::*) OR component=Hostwide)
+| `dmc_set_bin`
+| stats dc(data.search_props.sid) AS distinct_search_count by host, _time
+| bin _time minspan=10s
+| stats $searchFunc$(distinct_search_count) as search_count by host, _time
+| `dmc_search_count_rangemap_and_timechart`
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_search_activity_deployment_search_concurrency("$group$", $span$, $searchFunc$, $click.name2$)`&description=Metric: search count range: $click.name2$.]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by $searchFuncLabel$ number of concurrent searches over time.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Instances by $resourceFuncLabel$ $resourceTypeLabel$ Usage</title>
+      <input type="dropdown" token="resourceType" searchWhenChanged="true">
+        <label>Resource Type</label>
+        <showClearButton>false</showClearButton>
+        <default>pct_cpu</default>
+        <choice value="pct_cpu">CPU</choice>
+        <choice value="mem_used">Memory</choice>
+        <change>
+          <condition value="pct_cpu">
+            <set token="resourceTypeLabel">CPU</set>
+          </condition>
+          <condition value="mem_used">
+            <set token="resourceTypeLabel">Memory</set>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="resourceFunction" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <default>Median</default>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th percentile</choice>
+        <choice value="First">Sampled</choice>
+        <change>
+          <condition value="Median">
+            <set token="resourceFuncLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="resourceFuncLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="resourceFuncLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="resourceFuncLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="resourceFuncLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="resourceFuncLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` search_group=$group$ sourcetype=splunk_resource_usage ((component=PerProcess data.search_props.sid::*) OR component=Hostwide)
+| `dmc_set_bin`
+| stats latest(data.$resourceType$) AS resource_usage_dedup by _time, data.search_props.sid, data.pid, host
+| stats sum(resource_usage_dedup) AS sum_resource_usage by _time, host
+| bin _time minspan=10s
+| stats $resourceFunction$(sum_resource_usage) as resource_usage by _time, host
+| `dmc_$resourceType$_rangemap_and_timechart`
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Instance count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <drilldown>
+          <set token="span">$row._span$</set>
+          <link target="_self">
+            <![CDATA[managementconsole_instances?earliest=$earliest$&latest=$latest$&search=`dmc_drilldown_search_activity_deployment_resource_usage("$group$", $span$, $resourceType$, $resourceFunction$, $click.name2$)`&description=Metric: $resourceType$ usage range: $click.name2$]]>
+          </link>
+        </drilldown>
+      </chart>
+      <html>
+        <p>Count of Splunk Enterprise instances grouped by $resourceFuncLabel$ $resourceTypeLabel$ usage over time.</p>
+      </html>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,10 @@
+<endpoint name="control">
+  <header>Splunk controls</header>
+  <menu name="system_configurations">
+    <label>Restart</label>
+    <url>#</url>
+    <description>Restart Splunk.</description>
+    <order>200</order>
+    <id>server-controls</id>
+  </menu>
+</endpoint>

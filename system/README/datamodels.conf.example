@@ -1,0 +1,11 @@
+#   Version 6.2.6 
+#
+# Configuration for example datamodels
+#
+
+# An example of accelerating data for the 'mymodel' datamodel for the
+# past five days, generating and checking the column stores every 10 minutes
+[mymodel]
+acceleration = true
+acceleration.earliest_time = -5d
+acceleration.cron_schedule = */10 * * * *
