@@ -7,6 +7,8 @@
   vars:
     # splunk binary to install
     splunk_binary: 'splunk-6.2.6-274160-Linux-x86_64.tgz'
+    # repo to pull search head configs from
+    git_repo: git@github.com:divious1/splunkconf2015-demo.git
 
   roles:
     - common

@@ -1,0 +1,56 @@
+---
+- debug: msg="Remember to have a branch with the splunk/etc directory named just like the hostname of your search head before using this play"
+
+- name: copy splunk-admins private key
+  copy: src=splunk_creds/splunk-admin.key dest=/home/splunk-admin/priv.key mode=400
+  sudo: yes
+  sudo_user: splunk-admin
+
+- stat: path=/opt/splunk/etc/.git
+  register: git_path
+
+- service: name=splunk state=stopped
+
+- name: backup splunk/etc
+  shell: mv /opt/splunk/etc /opt/splunk/etc.bk
+  when: git_path.stat.exists == False 
+  ignore_errors: yes
+
+
+- name: clone git tracked branch for search head
+  git: repo={{ git_repo }} dest=/opt/splunk/etc version={{ansible_hostname}} accept_hostkey=yes key_file=/home/splunk-admin/priv.key
+  when: git_path.stat.exists == False 
+  ignore_errors: yes
+
+- stat: path=/opt/splunk/etc.bk
+  register: backup_path
+
+- name: clean out new branch
+  shell: cd /opt/splunk/etc/ && git rm -rf *
+  when: backup_path.stat.exists == True 
+
+- name: recover splunk/etc from install 
+  shell: cp -Rv /opt/splunk/etc.bk/* /opt/splunk/etc/ 
+  when: backup_path.stat.exists == True 
+  ignore_errors: yes
+
+- name: cleanup etc.bk
+  shell: rm -rf /opt/splunk/etc.bk
+  when: backup_path.stat.exists == True 
+
+- name: deploy git-ansible app
+  copy: src=opt/splunk/etc/apps/git-ansible dest=/opt/splunk/etc/apps/
+
+- name: modify git-whatchanges to check on search head branch
+  template: src=opt/splunk/etc/apps/git-ansible/bin/whatschanged.sh dest=/opt/splunk/etc/apps/git-ansible/bin/whatschanged.sh
+  tags:
+   - whatschanged
+
+- name: change permissions back to splunk
+  file: path=/opt/splunk/etc state=directory owner=splunk recurse=yes
+  notify: restart splunk
+
+
+#- name: deploy checkin cron 
+#  cron: 
+  

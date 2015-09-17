@@ -53,6 +53,7 @@
    - htop
    - ioping
    - ntp
+   - git
   when: ansible_distribution == "CentOS"
 
 #DEBIAN SPECIFIC APPS
@@ -80,6 +81,7 @@
    - iotop
    - htop
    - ioping
+   - git
    - ntp
   when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
 
