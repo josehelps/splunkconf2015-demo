@@ -1,6 +1,6 @@
-SplunkConf2015 - Splunk Configuration Management and Deployment with Ansible
+Splunk Configuration Management and Deployment with Ansible
 ==============
-Bit of the conference talk and example demo.
+Bit of the [Splunk 2015 Conference](https://conf.splunk.com/speakers.html#search=Splunk%20Configuration%20Management%20and%20Deployment%20with%20Ansible&) talk and example demo.
 
 ## Expectations
 
