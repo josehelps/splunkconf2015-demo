@@ -17,3 +17,7 @@ modtime = 1442799938.980801000
 [server/general]
 version = 6.2.6
 modtime = 1442799939.022529000
+
+[authorize/role_admin]
+version = 6.2.6
+modtime = 1442800649.011807000
