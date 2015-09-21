@@ -1,7 +1,6 @@
-ansible-splunk-simple
+SplunkConf2015 - Splunk Configuration Management and Deployment with Ansible
 ==============
-
-Simple Splunk deployment using Ansible, see [Splunk Blog Post](http://blogs.splunk.com/2014/07/12/deploying-splunk-securely-with-ansible-config-management-part-1/) for more information. 
+Bit of the conference talk and example demo.
 
 ## Expectations
 
