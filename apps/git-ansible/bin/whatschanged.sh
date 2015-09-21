@@ -20,14 +20,13 @@ echo "Too many arguments"
 fi
 
 location=$1
-cd $location 
-if [ -a .changes ]
+cd $location
+if [ -a $SPLUNK_HOME/.changes ]
 then
-  git whatchanged > .current_changes
-  diff .changes .current_changes -n
-  mv .current_changes .changes
+  git whatchanged search-head1 > $SPLUNK_HOME/.current_changes
+  diff $SPLUNK_HOME/.changes $SPLUNK_HOME/.current_changes -n
+  mv $SPLUNK_HOME/.current_changes $SPLUNK_HOME/.changes
 else
-  git whatchanged > .changes
-  cat .changes
+  git whatchanged search-head1 > $SPLUNK_HOME/.changes
+  cat $SPLUNK_HOME/.changes
 fi
-
