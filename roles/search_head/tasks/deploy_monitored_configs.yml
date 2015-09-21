@@ -42,7 +42,7 @@
   copy: src=opt/splunk/etc/apps/git-ansible dest=/opt/splunk/etc/apps/
 
 - name: modify git-whatchanges to check on search head branch
-  template: src=opt/splunk/etc/apps/git-ansible/bin/whatschanged.sh dest=/opt/splunk/etc/apps/git-ansible/bin/whatschanged.sh
+  template: src=opt/splunk/etc/apps/git-ansible/bin/whatschanged.sh dest=/opt/splunk/etc/apps/git-ansible/bin/whatschanged.sh mode=755
   tags:
    - whatschanged
 

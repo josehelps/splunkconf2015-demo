@@ -3,19 +3,6 @@ ansible-splunk-simple
 
 Simple Splunk deployment using Ansible, see [Splunk Blog Post](http://blogs.splunk.com/2014/07/12/deploying-splunk-securely-with-ansible-config-management-part-1/) for more information. 
 
-## Features
-* built and maintain a complete splunk enviroment in minutes
-* adhere by all splunk best practices and OS hardening procedures
-* distro agnostic
-* runs splunk as splunk user
-* can manage your entire splunk installation from one place
-
-## TODOs
-
-* read me for each role
-* add roles to ansible galaxy
-* Finish license\_master, cluster\_master
-
 ## Expectations
 
 This ansible package expectes your servers to be ubuntu base OS. The splunk binaries currently set are *Splunk 6.2* located under
@@ -47,3 +34,9 @@ This ansible package expectes your servers to be ubuntu base OS. The splunk bina
 change at `playbooks/splunk\_creds/passwd`
 
 The cert/key pair deployed are in the same folder. Although I highly recommend you generate your own keypairs
+
+## Configure Checkin
+1. add checking script at `extra/checkin.sh` on search head as hourly cron job 
+2. configure .gitconfig with use and email to use for checking extra/gitconfig.example 
+3. generate a key pair on the server `ssh-keygen -t rsa`
+4. add public key `cat /root/.ssh/id_rsa.pub` to search header branch  
