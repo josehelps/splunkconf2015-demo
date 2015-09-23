@@ -7,11 +7,15 @@
 
 # servers that are meant to be splunk search heads, will also have the common config applied.
 [search_head]
+#104.131.136.171
+107.170.217.199
+192.241.210.40
 #1.1.1.1 
 #sh1.buttercup.com
 
 # servers that are meant to be indexers, will also have the common config applied.
 [indexer]
+162.243.133.118
 
 # servers that are meant to be license masters, will also have the common config applied. NOT COMPLETD
 [license_master]
