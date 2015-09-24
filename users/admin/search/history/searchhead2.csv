@@ -1,0 +1,4 @@
+sid,search,"splunk_server","_time","is_realtime","event_count","exec_time","result_count","scan_count",status,"total_run_time","__mv_sid","__mv_search","__mv_splunk_server","__mv__time","__mv_is_realtime","__mv_event_count","__mv_exec_time","__mv_result_count","__mv_scan_count","__mv_status","__mv_total_run_time"
+"rt_1443055650.7","| metadata type=sourcetypes | search totalCount > 0",searchhead2,"1443055650.091318",1,,,,,,,,,,,,,,,,,
+"rt_1443055651.8","| metadata type=hosts | search totalCount > 0 | table host totalCount recentTime | fieldformat totalCount=tostring(totalCount, ""commas"") | fieldformat recentTime=strftime(recentTime, ""%Y-%m-%dT%H:%M:%S.%Q%:z"")",searchhead2,"1443055651.297152",1,,,,,,,,,,,,,,,,,
+"1443055657.11","search sourcetype=""git-whatchanged""",searchhead2,"1443055657.477866",0,20,1443055657,20,20,completed,"0.347000",,,,,,,,,,,
