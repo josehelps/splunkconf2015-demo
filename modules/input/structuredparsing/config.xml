@@ -1,0 +1,24 @@
+<!--    SPL-66044
+        Structured Parsing Pipeline for Universal Forwarder
+        This pipeline is disabled for non-universal forwarder instances
+-->
+<module>
+	<pipeline name="structuredparsing" type="startup">
+		<processor name="readerIn" plugin="queueinputprocessor">
+                        <config>
+                                <queueName>structuredParsingQueue</queueName>
+                        </config>
+		</processor>
+
+		<processor name="utf8"          plugin="utf8processor">                 <config/> </processor>
+		<processor name="linebreaker"   plugin="linebreakingprocessor">         <config/> </processor>
+                <processor name="aggregator"    plugin="aggregatorprocessor">           <config/> </processor>
+                <processor name="regexreplacement" plugin="regexextractionprocessor">   <config/> </processor>
+
+		<processor name="sendOut" plugin="queueoutputprocessor">
+                        <config>
+                                <queueName>parsingQueue</queueName>
+                        </config>
+		</processor>
+	</pipeline>
+</module>

@@ -1,0 +1,23 @@
+#   Version 6.2.6 
+#
+# This is an example pdf_server.conf.  Use this file to configure pdf server process settings.
+#
+# To use one or more of these configurations, copy the configuration block into pdf_server.conf 
+# in $SPLUNK_HOME/etc/system/local/. You must restart the pdf server to enable configurations.
+#
+# To learn more about configuration files (including precedence) please see the documentation 
+# located at http://docs.splunk.com/Documentation/Splunk/latest/Admin/Aboutconfigurationfiles
+
+
+
+# This stanza heading must precede any changes.
+[settings]
+
+# Change the default port number:
+httpport = 12900
+
+# Lock down access to the IP address of specific appservers 
+# that will utilize the pdf server
+appserver_ipaddr = 192.168.3.0/24,192.168.2.2
+client_ipaddr = 192.168.3.0/24,192.168.2.2
+

@@ -1,0 +1,66 @@
+#   Version 6.2.6 
+#
+# Configuration for external search commands
+#
+
+##############
+# defaults for all external commands, exceptions are below in individual stanzas
+
+# type of script: 'python', 'perl'
+TYPE = python
+#default FILENAME would be <stanza-name>.py for python, <stanza-name>.pl for perl and <stanza-name> otherwise
+
+# is command streamable?
+STREAMING = false
+
+# maximum data that can be passed to command (0 = no limit)
+MAXINPUTS = 50000
+
+# end defaults
+#####################
+
+[crawl]
+FILENAME = crawl.py
+
+[createrss]
+FILENAME = createrss.py
+
+[diff]
+FILENAME = diff.py
+
+[gentimes]
+FILENAME = gentimes.py
+
+[head]
+FILENAME = head.py
+
+[loglady]
+FILENAME = loglady.py
+
+[marklar]
+FILENAME = marklar.py
+
+[runshellscript]
+FILENAME = runshellscript.py
+
+[sendemail]
+FILENAME = sendemail.py
+
+[translate]
+FILENAME = translate.py
+
+[transpose]
+FILENAME = transpose.py
+
+[uniq]
+FILENAME = uniq.py
+
+[windbag]
+filename = windbag.py
+supports_multivalues = true
+
+[xmlkv]
+FILENAME = xmlkv.py
+
+[xmlunescape]
+FILENAME = xmlunescape.py

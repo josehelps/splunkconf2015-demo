@@ -1,0 +1,155 @@
+<form hideEdit="True" script="common_control.js">
+  <label>Search Usage Statistics: Instance</label>
+  <description/>
+  <fieldset autoRun="true" submitButton="false">
+    <input type="dropdown" searchWhenChanged="true" token="splunk_server">
+      <label>Instance</label>
+      <showClearButton>false</showClearButton>
+      <populatingSearch fieldForLabel="serverName" fieldForValue="serverName">
+        | `dmc_get_instance_info($dmc_group$)`
+      </populatingSearch>
+      <selectFirstChoice>true</selectFirstChoice>
+      <change>
+        <condition value="*">
+          <set token="host">$row.host$</set>
+        </condition>
+      </change>
+    </input>
+    <input type="radio" searchWhenChanged="true" token="dmc_group">
+      <label></label>
+      <choice value="dmc_group_search_head">Search Heads Only</choice>
+      <choice value="*">All Instances</choice>
+      <default>dmc_group_search_head</default>
+    </input>
+    <input type="time" searchWhenChanged="true" token="time">
+      <label>Time Range:</label>
+      <default>Last 4 hours</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Search Activity by User</title>
+      <table>
+        <searchString>
+`dmc_audit_get_searches($host$)`
+| stats min(_time) as _time values(user) as user max(total_run_time) as total_run_time first(search) as search by search_id
+| chart median(total_run_time) as median_runtime Perc90(total_run_time) as Perc90_runtime sum(total_run_time) as cum_runtime count as count max(_time) as last_use by user
+| eval last_use = strftime(last_use, "%F %T")
+| fields user, count, median_runtime, Perc90_runtime, cum_runtime, last_use
+| rename user as User, count as "Search Count", median_runtime as "Median Runtime", Perc90_runtime as "90th Percentile Runtime", cum_runtime as "Cumulative Runtime", last_use as "Last Search"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Common Searches</title>
+      <table>
+        <searchString>
+`dmc_audit_get_searches($host$)`
+| stats min(_time) as _time values(user) as user max(total_run_time) as total_run_time first(search) as search by search_id
+| stats count median(total_run_time) as median_runtime max(total_run_time) as max_runtime values(user) as user by search
+| sort - count
+| rename search as "Search", count as "Count", median_runtime as "Median Runtime", max_runtime as "Max Runtime", user as User
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Long-Running Searches</title>
+      <table>
+        <searchString>
+`dmc_audit_get_searches($host$)`
+| eval is_scheduled = if(search_id LIKE "scheduler%", "yes", "no")
+| stats min(_time) as _time, values(user) as user, max(total_run_time) as total_run_time, first(search) as search, first(is_scheduled) as is_scheduled, first(apiStartTime) as start_time, first(apiEndTime) as end_time by search_id
+| fields - _time
+| fields search, total_run_time, start_time, end_time, is_scheduled, user
+| eval start_time = if(start_time="'ZERO_TIME'", "-", start_time)
+| eval end_time = if(end_time="'ZERO_TIME'", "now", end_time)
+| sort - total_run_time
+| rename search as Search, total_run_time as "Search Runtime", start_time as Start, end_time as End, is_scheduled as "Scheduled", user as "User"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Common Search Commands</title>
+      <table>
+        <searchString>
+`dmc_audit_get_searches($host$)`
+| stats min(_time) as _time first(user) as user max(total_run_time) as total_run_time first(search) as search by search_id
+| eval commands = commands(search)
+| streamstats window=1 values(commands) as commands
+| stats count avg(total_run_time) as avg_runtime max(total_run_time) as max_runtime by commands
+| eval avg_runtime = round(avg_runtime, 2)
+| eval max_runtime = round(max_runtime, 2)
+| sort - count, - max_runtime, - avg_runtime
+| rename commands as Command, avg_runtime as "Average Runtime", max_runtime as "Max Runtime", count as "Count"
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">20</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

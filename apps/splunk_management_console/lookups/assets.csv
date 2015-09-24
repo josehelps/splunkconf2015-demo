@@ -1,0 +1,5 @@
+peerURI,serverName,host,machine,"search_group","__mv_peerURI","__mv_serverName","__mv_host","__mv_machine","__mv_search_group"
+localhost,searchhead2,searchhead2,searchhead2,"dmc_group_indexer",,,,,
+localhost,searchhead2,searchhead2,searchhead2,"dmc_group_kv_store",,,,,
+localhost,searchhead2,searchhead2,searchhead2,"dmc_group_license_master",,,,,
+localhost,searchhead2,searchhead2,searchhead2,"dmc_group_search_head",,,,,

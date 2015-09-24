@@ -1,0 +1,16 @@
+<!-- Version 4.0 -->
+<module>
+	<pipeline name="exec" type="startup">
+		<processor name="exec" plugin="execprocessor">
+			<config>
+			</config>
+		</processor>
+				
+		<processor name="sendOut" plugin="queueoutputprocessor">
+			<config>
+				<queueName>parsingQueue</queueName>
+				<divertStructuredData/>
+			</config>
+		</processor>
+	</pipeline>
+</module>

@@ -1,0 +1,26 @@
+#   Version 6.2.6 
+#
+# The following are example crawl.conf configurations. Configure properties for crawl.
+#
+# To use one or more of these configurations, copy the configuration block into
+# crawl.conf in $SPLUNK_HOME/etc/system/local/. You must restart Splunk to enable configurations.
+#
+# To learn more about configuration files (including precedence) please see the documentation 
+# located at http://docs.splunk.com/Documentation/Splunk/latest/Admin/Aboutconfigurationfiles
+
+[files]
+bad_directories_list= bin, sbin, boot, mnt, proc, tmp, temp, home, mail, .thumbnails, cache, old
+bad_extensions_list= mp3, mpg, jpeg, jpg,  m4, mcp, mid
+bad_file_matches_list= *example*, *makefile, core.*
+packed_extensions_list= gz, tgz, tar, zip
+collapse_threshold= 10
+days_sizek_pairs_list= 3-0,7-1000, 30-10000
+big_dir_filecount= 100
+index=main
+max_badfiles_per_dir=100
+
+
+[network]
+host = myserver
+subnet = 24
+

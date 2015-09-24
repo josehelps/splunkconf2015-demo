@@ -1,8 +1,0 @@
----
-# This playbook contains common tasks in this role
-
-- include: basic_apps.yml
-- include: users.yml
-- include: files.yml
-- include: cron.yml
-- include: time.yml

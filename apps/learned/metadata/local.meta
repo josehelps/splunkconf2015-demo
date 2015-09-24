@@ -1,0 +1,14 @@
+[props/first_install-too_small]
+owner = nobody
+version = 6.2.6
+modtime = 1443055264.892950000
+
+[props/splunkd_stdout-too_small]
+owner = nobody
+version = 6.2.6
+modtime = 1443055264.916914000
+
+[props/export_metrics-too_small]
+owner = nobody
+version = 6.2.6
+modtime = 1443055316.648712000

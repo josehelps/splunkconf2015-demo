@@ -1,0 +1,51 @@
+.dashboard-row3 .dashboard-panel .panel-element-row {
+    width: 1200px;
+    margin: 0 auto;
+    background: transparent 50% 50% no-repeat url('/static/app/splunk_management_console/splunk_data_pipeline_no_fschange_80_dots_per_inch.png');
+    min-height: 380px;
+    position: relative;
+}
+.dashboard-row3 .single .panel-footer {
+    display: inline-block;
+    -ms-transform: translateX(120px);
+    transform: translateX(120px);
+}
+.dashboard-row3 .single .panel-footer .error-details .dropdown-menu {
+    top: 25px !important;
+    left: 30px !important;
+}
+.dashboard-row3 .panel-head,
+.dashboard-row3 .paxnel-footer {
+    display: none;
+}
+
+.dashboard-row3 .after-label{
+    display: none;
+}
+.dashboard-row3 .under-label{
+    display: none;
+}
+.dashboard-row3 #parsing_queue {
+   position: absolute;
+   top: 180px;
+   left: 80px;
+} 
+
+.dashboard-row3 #merging_queue {
+   position: absolute;
+   top: 180px;
+   left: 280px;
+} 
+
+.dashboard-row3 #typing_queue {
+   position: absolute;
+   top: 180px;
+   left: 480px;
+} 
+
+.dashboard-row3 #index_queue {
+   position: absolute;
+   top: 180px;
+   left: 685px;
+} 
+

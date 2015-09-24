@@ -1,0 +1,27 @@
+<quickstart>
+
+    <title>Windows Registry</title>
+    <optiongroup>
+
+        <option platforms="Windows">
+            <title>Collect Windows Registry data on this Splunk server</title>
+            <summary>Configure Splunk to index data from the Windows Registry.</summary>
+            <doctarget>[learnmore.recipes.windows.registry]</doctarget>
+            <action type="add_regmon">
+                <label>Next</label>
+            </action>
+        </option>
+        
+        <option>
+            <title>Forward Windows Registry data from another machine</title>
+            <summary>Use Splunk's universal forwarder to forward data from any machine to this Splunk server.</summary>
+            <doctarget>[learnmore.recipes.forwarder]</doctarget>
+            <action type="href">
+                <label>Download the universal forwarder</label>
+                <target>http://splunk.com/r/universalforwarder</target>
+            </action>
+        </option>
+               
+    </optiongroup>
+
+</quickstart>

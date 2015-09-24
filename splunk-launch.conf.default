@@ -1,0 +1,30 @@
+#   Version 6.2.6
+
+# Modify the following line to suit the location of your Splunk install.
+# If unset, Splunk will use the parent of the directory this configuration
+# file was found in
+#
+# SPLUNK_HOME=/home/build/build-home/6.2.6
+
+# By default, Splunk stores its indexes under SPLUNK_HOME in the
+# var/lib/splunk subdirectory.  This can be overridden
+# here:
+#
+# SPLUNK_DB=/home/build/build-home/6.2.6/var/lib/splunk
+
+# Splunkd daemon name
+SPLUNK_SERVER_NAME=Splunkd
+
+# Splunkweb daemon name
+SPLUNK_WEB_NAME=splunkweb
+
+# If SPLUNK_OS_USER is set, then Splunk service will only start
+# if the 'splunk [re]start [splunkd]' command is invoked by a user who
+# is, or can effectively become via setuid(2), $SPLUNK_OS_USER.
+# (This setting can be specified as username or as UID.)
+#
+# SPLUNK_OS_USER
+
+
+MONGOC_DISABLE_SHM=1
+

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>License Usage | Splunk</title>
+
+    <!-- not sure if this is correct -->
+    <link rel="shortcut icon" href="{{SPLUNKWEB_URL_PREFIX}}/static/img/favicon.ico"/> 
+    <meta name="description" content="listen to your data" />
+    <meta name="author" content="Splunk Inc." />
+    <meta name="viewport" content="width=1024, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="{{SPLUNKWEB_URL_PREFIX}}/static/css/build/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="{{SPLUNKWEB_URL_PREFIX}}/static/css/build/pages/dashboard-simple-bootstrap.min.css" />
+    <style media="screen" type="text/css">
+		.edit-dashboard-menu {
+			margin-right: -60px;
+		}
+
+		.dashboard-body {
+			padding-left:0px;
+			padding-right:0px
+		}
+
+		.help-link {
+			position: absolute;
+			right: 20px;
+			top: 10px;
+		}
+
+		.tab-content {
+			padding: 20px;
+			background-color: #fff;
+		}
+
+		.tab-title-text {
+			font-size:13px;
+		}
+
+		.tab-pane {
+			background-color:transparent;
+		}
+
+		.drop-down-label {
+			display: inline-block;
+		}
+
+		.info-messages {
+			position: relative;
+			top: -20px;
+			margin-bottom: -10px;
+		}
+		
+		.info-message {
+			margin-bottom: 0px;
+		}
+		
+		.pool-overlay {
+            position: relative;
+            top: -30px;
+            left: 211px;
+		}
+			
+	</style>
+</head>
+<body class="simplexml preload page-licensing">
+<div class="header" role="banner">
+    <div id="placeholder-splunk-bar">
+        <a href="{{SPLUNKWEB_URL_PREFIX}}/app/launcher/home" class="brand" title="splunk &gt; listen to your data"><span class="do-i18n">splunk</span><strong>&gt;</strong></a>
+    </div>
+    <div id="placeholder-app-bar"></div>
+</div>
+
+<div class="dashboard-body container-fluid main-section-body" role="main">
+    <div class="section-padded section-header">
+        <h2 class="section-title"><span class="do-i18n">License Usage</span></h2>
+        <!-- IB CHANGE -->
+        <p class="section-description"><a href="{{SPLUNKWEB_URL_PREFIX}}/manager/system/licensing"><span class="do-i18n">Licensing</span></a> » <span class="do-i18n">License Usage Reporting</span></p>
+        <!-- RT CHANGE -->
+        <div class="fieldset">
+            <div class="element input-dropdown" id="field4">
+                <!-- RT CHANGE -->
+                <label class="drop-down-label"><span class="do-i18n">License Masters:</span></label>
+            </div>
+        </div>
+        
+        <a id="help_today" class="help-link btn" href="" target="_blank" title="Splunk help"><span class="do-i18n">Learn more </span><i class="icon-external"></i></a>
+        <a id="help_30days" class="help-link btn" style="display:none" href="" target="_blank" title="Splunk help"><span class="do-i18n">Learn more </span><i class="icon-external"></i></a>
+    </div>
+
+	<!-- IB CHANGE -->
+   	<ul class="nav nav-tabs" id="myTabs">
+        <li class="active"><a class="tab-title-text" href="#todayTab"><span class="do-i18n">Today</span></a></li>
+        <li><a class="tab-title-text" href="#historyTab"><span class="do-i18n">Previous 30 days</span></a></li>
+	</ul>
+
+	<div class="tab-content">
+  		<div class="tab-pane active" id="todayTab">
+            <div class="dashboard-row dashboard-row2">
+		        <div class="dashboard-cell" style="width: 33.33%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element1">
+		                    <div class="panel-head">
+                                <h3><span class="do-i18n">Today's License Usage (GB)</h3>
+		                    </div>
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		        <div class="dashboard-cell" style="width: 33.33%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element2">
+		                    <div class="panel-head">
+                                <h3><span class="do-i18n">Today's License Usage per Pool</span></h3>
+		                    </div>
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		        <div class="dashboard-cell" style="width: 33.33%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element3">
+		                    <div class="panel-head">
+                                <h3><span class="do-i18n">Today's Percentage of Daily License Quota Used per Pool</span></h3>
+		                    </div>
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		    <div class="dashboard-row dashboard-row4">
+		        <div class="dashboard-cell" style="width: 50%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element4">
+		                    <div class="panel-head">
+                                <h3><span class="do-i18n">Pool Usage Warnings</span></h3>
+		                    </div>
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		        <div class="dashboard-cell" style="width: 50%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element5">
+		                    <div class="panel-head">
+                                <h3><span class="do-i18n">Slave Usage Warnings</span></h3>
+		                    </div>
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+  		</div>
+  		<!-- IB CHANGE -->
+  		<div class="tab-pane" id="historyTab">
+  			<!-- IB CHANGE -->
+		    <div class="fieldset">
+		        <div class="element input-dropdown" id="field1">
+		        	<!-- IB CHANGE -->
+                    <label class="drop-down-label"><span class="do-i18n">Pool:</span></label>
+		        </div>
+		        <div class="element input-dropdown" id="field2">
+		        	<!-- IB CHANGE -->
+                    <label class="drop-down-label"><span class="do-i18n">Split by:</span></label>
+		        </div>
+		    </div>
+		    <div class="info-messages">
+		    </div>
+		    <div class="dashboard-row dashboard-row6">
+		        <div class="dashboard-cell" style="width: 100%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element6">
+		                    <div class="panel-head">
+                                <h3><span class="do-i18n">Daily License Usage</span></h3>
+		                    </div>
+		                    <div class="input input-checkboxgroup pool-overlay" id="field3">
+                            </div>      
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		    <div class="dashboard-row dashboard-row8">
+		        <div class="dashboard-cell" style="width: 100%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element7">
+		                    <div class="panel-head">
+                                <h3><span class="do-i18n">Percentage of Daily License Quota Used</span></h3>
+		                    </div>
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		    <div class="dashboard-row dashboard-row10">
+		        <div class="dashboard-cell" style="width: 100%;">
+		            <div class="dashboard-panel">
+		                <div class="dashboard-element" id="element8">
+		                    <div class="panel-head">
+		                    	<!-- IB CHANGE -->
+                                <h3 id="avg-peak-chart-title"><span class="do-18n">Average and Peak Daily Volumei</span></h3>
+		                    </div>
+		                    <div class="panel-body"></div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+  		</div>
+  	</div>
+</div>
+<div class="footer"></div>
+<!-- IB CHANGE -->
+<script>
+    var i18n_register = function(){}
+</script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/config?autoload=1"></script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/static/js/i18n.js"></script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/i18ncatalog?autoload=1"></script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/static/js/build/simplexml.min/config.js"></script>
+<script>
+	require.config({
+        baseUrl: "{{SPLUNKWEB_URL_PREFIX}}/static/js"
+	});	
+</script>
+<script src="{{SPLUNKWEB_URL_PREFIX}}/static/app/splunk_management_console/licenseusage.js"></script>
+</body>
+</html>

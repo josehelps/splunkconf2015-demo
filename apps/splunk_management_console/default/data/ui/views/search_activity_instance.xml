@@ -1,0 +1,464 @@
+<form hideEdit="True" onUnloadCancelJobs="true" script="common_control.js">
+  <label>Search Activity: Instance</label>
+  <description/>
+  <fieldset autoRun="true" submitButton="false">
+    <input type="dropdown" searchWhenChanged="true" token="splunk_server">
+      <label>Instance</label>
+      <showClearButton>false</showClearButton>
+      <populatingSearch fieldForLabel="serverName" fieldForValue="serverName">
+        | `dmc_get_instance_info($dmc_group$)`
+      </populatingSearch>
+      <selectFirstChoice>true</selectFirstChoice>
+      <change>
+        <condition value="*">
+          <set token="host">$row.host$</set>
+        </condition>
+      </change>
+    </input>
+    <input type="radio" searchWhenChanged="true" token="dmc_group">
+      <label></label>
+      <choice value="dmc_group_search_head">Search heads only</choice>
+      <choice value="*">All instances</choice>
+      <default>dmc_group_search_head</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <html>
+        <h2>
+          <span>Select views: </span>
+          <span id="link-switcher-view">
+            <a href="#" class="btn-pill active" data-item="all">All</a>
+            <a href="#" class="btn-pill" data-item="snapshot">Snapshot</a>
+            <a href="#" class="btn-pill" data-item="historical">Historical</a>
+          </span>
+        </h2>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <html>
+        <h1 id="snapshot_section_title">Snapshots</h1>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$historical$">
+      <title>Search Activity</title>
+      <input type="dropdown" token="resourceSnapshotSplitBy" searchWhenChanged="true">
+        <label>Split by</label>
+        <showClearButton>false</showClearButton>
+        <default>type</default>
+        <choice value="app">App</choice>
+        <choice value="user">User</choice>
+        <choice value="mode">Mode</choice>
+        <choice value="type">Type</choice>
+        <choice value="role">Role</choice>
+        <!--<choice value="provenance">Provenance</choice>-->
+        <change>
+          <condition value="mode">
+            <set token="resourceSnapshotModeDoc">true</set>
+          </condition>
+          <condition value="*">
+            <unset token="resourceSnapshotModeDoc"></unset>
+          </condition>
+        </change>
+      </input>
+      <table>
+        <searchString>
+| rest splunk_server=$splunk_server$ /services/server/status/resource-usage/splunk-processes 
+| search search_props.sid=* AND pct_cpu=* AND mem_used=*
+| stats dc(search_props.sid) AS Count sum(pct_cpu) as sum_pct_cpu sum(mem_used) as mem_used by search_props.$resourceSnapshotSplitBy$
+| sort -Count -sum_pct_cpu -mem_used
+| rename app AS App user AS User mode AS Mode type AS Type role AS Role Count as "Count of Searches", sum_pct_cpu as "CPU Usage (%)", mem_used as "Physical Memory Usage (MB)", search_props.$resourceSnapshotSplitBy$ as $resourceSnapshotSplitBy$
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">table</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Count</option>
+        <option name="charting.axisTitleY.text">Count</option>
+        <option name="refresh.auto.interval">60</option>
+        <option name="refresh.time.visible">false</option>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <drilldown>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <html depends="$resourceSnapshotModeDoc$">
+        <p>Mode can be historical, historical batch, RT, or RT indexed.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <html>
+        <h1 id="historical_section_title">Historical Charts</h1>
+      </html>
+      <input type="time" searchWhenChanged="true" token="time">
+        <label>Time Range:</label>
+        <default>
+          <earliestTime>-4h@m</earliestTime>
+          <latestTime>now</latestTime>
+        </default>
+      </input>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>$concurrencyFuncLabel$ Search Concurrency</title>
+      <input type="dropdown" token="concurrencyFunction" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <default>Median</default>
+        <choice value="First">Sampled</choice>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <change>
+          <condition value="Median">
+            <set token="concurrencyFuncLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="concurrencyFuncLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="concurrencyFuncLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="concurrencyFuncLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="concurrencyFuncLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="concurrencyFuncLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="concurrencySplitBy" searchWhenChanged="true">
+        <label>Split by</label>
+        <showClearButton>false</showClearButton>
+        <default>data.search_props.type</default>
+        <choice value="data.search_props.app">App</choice>
+        <choice value="data.search_props.user">User</choice>
+        <choice value="data.search_props.mode">Mode</choice>
+        <choice value="data.search_props.type">Type</choice>
+        <choice value="data.search_props.role">Role</choice>
+        <!--<choice value="data.search_props.provenance">Provenance</choice>-->
+        <change>
+          <condition value="data.search_props.mode">
+            <set token="concurrencyModeDoc">true</set>
+          </condition>
+          <condition value="*">
+            <unset token="concurrencyModeDoc"></unset>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` host=$host$ sourcetype=splunk_resource_usage component=PerProcess data.search_props.sid::*
+| `dmc_set_bin`
+| stats dc(data.search_props.sid) AS distinct_search_count by _time, $concurrencySplitBy$ 
+| `dmc_timechart` $concurrencyFunction$(distinct_search_count) AS "$concurrencyFunction$ of search concurrency" by $concurrencySplitBy$
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Count</option>
+        <!-- <option name="refresh.auto.interval">300</option> -->
+      </chart>
+      <html depends="$concurrencyModeDoc$">
+        <p>Mode can be historical, historical batch, RT, or RT indexed.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>$resourceFuncLabel$ Resource Usage of Searches</title>
+      <input type="dropdown" token="resourceType" searchWhenChanged="true">
+        <label>Resource Type</label>
+        <showClearButton>false</showClearButton>
+        <choice value="data.pct_cpu">CPU</choice>
+        <choice value="data.mem_used">Memory</choice>
+        <default>data.pct_cpu</default>
+        <change>
+          <condition value="data.pct_cpu">
+            <set token="usageYAxis">CPU Usage (%)</set>
+          </condition>
+          <condition value="data.mem_used">
+            <set token="usageYAxis">Memory Usage (MB)</set>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="resourceFunction" searchWhenChanged="true">
+        <label>Function</label>
+        <showClearButton>false</showClearButton>
+        <default>Median</default>
+        <choice value="First">Sampled</choice>
+        <choice value="Median">Median</choice>
+        <choice value="Max">Maximum</choice>
+        <choice value="Min">Minimum</choice>
+        <choice value="Perc90">90th Percentile</choice>
+        <change>
+          <condition value="Median">
+            <set token="resourceFuncLabel">Median</set>
+          </condition>
+          <condition value="Perc90">
+            <set token="resourceFuncLabel">90th Percentile</set>
+          </condition>
+          <condition value="Avg">
+            <set token="resourceFuncLabel">Average</set>
+          </condition>
+          <condition value="Max">
+            <set token="resourceFuncLabel">Maximum</set>
+          </condition>
+          <condition value="Min">
+            <set token="resourceFuncLabel">Minimum</set>
+          </condition>
+          <condition value="First">
+            <set token="resourceFuncLabel">Sampled</set>
+          </condition>
+        </change>
+      </input>
+      <input type="dropdown" token="resourceSplitBy" searchWhenChanged="true">
+        <label>Split by</label>
+        <showClearButton>false</showClearButton>
+        <default>data.search_props.type</default>
+        <choice value="data.search_props.app">App</choice>
+        <choice value="data.search_props.user">User</choice>
+        <choice value="data.search_props.mode">Mode</choice>
+        <choice value="data.search_props.type">Type</choice>
+        <choice value="data.search_props.role">Role</choice>
+        <!--<choice value="data.search_props.provenance">Provenance</choice>-->
+        <change>
+          <condition value="data.search_props.mode">
+            <set token="resourceModeDoc">true</set>
+          </condition>
+          <condition value="*">
+            <unset token="resourceModeDoc"></unset>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` host=$host$ sourcetype=splunk_resource_usage component=PerProcess data.search_props.sid::*
+| `dmc_set_bin`
+| stats latest($resourceType$) AS resource_usage_dedup by _time, $resourceSplitBy$, data.search_props.sid, data.pid
+| stats sum(resource_usage_dedup) AS sum_resource_usage by _time,  $resourceSplitBy$ 
+| `dmc_timechart` $resourceFunction$(sum_resource_usage) AS "$resourceFunction$ of resource usage" by $resourceSplitBy$
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="list.drilldown">full</option>
+        <option name="list.wrap">1</option>
+        <option name="maxLines">5</option>
+        <option name="raw.drilldown">full</option>
+        <option name="rowNumbers">false</option>
+        <option name="table.drilldown">all</option>
+        <option name="table.wrap">1</option>
+        <option name="type">list</option>
+        <option name="wrap">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="charting.axisTitleY.text">$usageYAxis$</option>
+        <!-- <option name="refresh.auto.interval">300</option> -->
+      </chart>
+      <html depends="$resourceModeDoc$">
+        <p>Mode can be historical, historical batch, RT, or RT indexed.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Aggregate Search Runtime</title>
+      <input type="dropdown" token="runtimeSplitBy" searchWhenChanged="true">
+        <label>Split by</label>
+        <showClearButton>false</showClearButton>
+        <default>data.search_props.type</default>
+        <choice value="data.search_props.app">App</choice>
+        <choice value="data.search_props.user">User</choice>
+        <choice value="data.search_props.mode">Mode</choice>
+        <choice value="data.search_props.type">Type</choice>
+        <choice value="data.search_props.role">Role</choice>
+        <!--<choice value="data.search_props.provenance">Provenance</choice>-->
+        <change>
+          <condition value="data.search_props.mode">
+            <set token="runtimeModeDoc">true</set>
+          </condition>
+          <condition value="*">
+            <unset token="runtimeModeDoc"></unset>
+          </condition>
+        </change>
+      </input>
+      <chart>
+        <searchString>
+`dmc_set_index_introspection` host=$host$ sourcetype=splunk_resource_usage component=PerProcess data.search_props.sid::*
+| `dmc_set_bin`
+| eval ELAPSED='data.elapsed'
+| stats max(ELAPSED) as ELAPSED by data.search_props.sid $runtimeSplitBy$ _time
+| streamstats current=t global=f window=2 earliest(ELAPSED) as prev_ELAPSED latest(ELAPSED) as curr_ELAPSED by data.search_props.sid $runtimeSplitBy$
+| eval `dmc_collection_interval`
+| eval delta_ELAPSED = curr_ELAPSED - prev_ELAPSED
+| eval runtime = if(delta_ELAPSED = 0, min(curr_ELAPSED, collection_interval), delta_ELAPSED)
+| `dmc_timechart` sum(runtime) by $runtimeSplitBy$
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleY.text">Runtime (seconds)</option>
+        <option name="charting.axisTitleX.text">Time</option>
+      </chart>
+      <html depends="$runtimeModeDoc$">
+        <p>Mode can be historical, historical batch, RT, or RT indexed.</p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel rejects="$snapshot$">
+      <title>Top 10 Memory-Consuming Searches</title>
+      <table>
+        <searchString>
+`dmc_set_index_introspection` host=$host$ sourcetype=splunk_resource_usage data.search_props.sid::* data.search_props.mode!=RT
+| `dmc_rename_introspection_fields`
+| stats max(elapsed) as runtime max(mem_used) as mem_used earliest(_time) as _time by sid, type, mode, app, role, user
+| eval mem_used = round(mem_used, 2)
+| eval day = round(runtime / (3600*24) - 0.5)
+| eval hour = round((runtime % (3600*24)) / 3600 - 0.5)
+| eval minute = round((runtime % 3600) / 60 - 0.5)
+| eval second = round(runtime % 60, 2)
+| eval time = day."d ".hour."h ".minute."min ".second."s"
+| sort 10 - mem_used
+| fields - runtime, day, hour, minute, second
+| eval _time=strftime(_time,"%+")
+| rename sid as SID, type as Type, mode as Mode, app as App, role as Role, user as User, mem_used as "Memory Usage (MB)", _time as Started, time as Runtime
+        </searchString>
+        <earliestTime>$time.earliest$</earliestTime>
+        <latestTime>$time.latest$</latestTime>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">true</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="count">10</option>
+        <drilldown>
+          <condition field="SID">
+            <set token="top10_drilldown_sid">$click.value2$</set>
+            <set token="top10_drilldown_earliest">$earliest$</set>
+            <set token="top10_drilldown_latest">$latest$</set>
+            <set token="top10drilldown">$click.name2$</set>
+          </condition>
+          <condition field="*"></condition>
+        </drilldown>
+      </table>
+      <html>
+        <p>Click on a SID to see more details</p>
+      </html>
+    </panel>
+    <panel depends="$top10drilldown$">
+      <title>Details of SID: $top10_drilldown_sid$</title>
+      <table>
+        <searchString>
+`dmc_set_index_audit` action=search sourcetype=audittrail
+ [ localop | stats count
+   | eval search_id = replace("$top10_drilldown_sid$", "^remote_[^_]*_", "")
+   | table search_id ]
+ [ localop | stats count
+   | eval earliest = $top10_drilldown_earliest$ - 86400
+   | table earliest ]
+ [ localop | stats count
+   | eval host = if(like("$top10_drilldown_sid$", "remote_%"), "*", "$host$")
+   | table host ]
+ latest=$top10_drilldown_latest$
+| stats values(savedsearch_name) AS search_name values(result_count) AS result_count values(event_count) AS event_count values(scan_count) AS scan_count values(total_run_time) AS search_run_time values(host) as host values(search) AS search_string by search_id
+| transpose
+| rename column as Property, "row 1" as Value
+        </searchString>
+        <option name="drilldown">off</option>
+        <option name="wrap">true</option>
+      </table>
+      <html depends="$top10drilldown$">
+        <p>Please try to choose a larger time range if this panel produces no result.</p>
+        <div> </div>
+        <a id="smc-close-drilldown">Close this panel</a>
+      </html>
+    </panel>
+  </row>
+</form>
